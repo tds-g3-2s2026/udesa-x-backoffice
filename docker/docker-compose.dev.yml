@@ -1,0 +1,20 @@
+name: udesa-x-backoffice
+
+services:
+  backoffice:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: dev
+    container_name: udesa-x-backoffice-dev
+    ports:
+      - '${PORT:-5173}:5173'
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    volumes:
+      - ../src:/app/src
+      - ../public:/app/public
+      - ../index.html:/app/index.html
+      - ../vite.config.ts:/app/vite.config.ts
+      - /app/node_modules
+    restart: unless-stopped
