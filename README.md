@@ -2,9 +2,13 @@
 
 Aplicación web destinada exclusivamente a administradores para monitorear el funcionamiento de la aplicación principal, detectar fallas y auditar la plataforma.
 
-**Stack:** React 19, Vite 8, TypeScript en modo estricto, Mantine 9 para la interfaz, TanStack Router v1 para el ruteo tipado, Zustand para el estado de sesión, TanStack Query para el acceso a datos y Axios como cliente HTTP. Runtime y gestor de paquetes con Bun, tests con Vitest y React Testing Library, linting con ESLint y formato con Prettier.
+**Stack:** React 19 con React Compiler activado, Vite 8, TypeScript en modo estricto, Mantine 9 para la interfaz, TanStack Router v1 para el ruteo tipado, Zustand para el estado de sesión, TanStack Query para el acceso a datos y Axios como cliente HTTP. Runtime y gestor de paquetes estándar con Bun (`bun.lock`), tests con Vitest y React Testing Library, linting con ESLint y formato con Prettier.
 
-## Requisitos previos
+## Entorno de ejecución y gestor de paquetes (Bun)
+
+El proyecto utiliza **Bun** como runtime de JavaScript y gestor de paquetes estándar tanto para desarrollo local como para las imágenes Docker y los pipelines de CI (`ci-node.yml` con `oven-sh/setup-bun` e instalación determinística vía `bun install --frozen-lockfile`).
+
+### Requisitos previos
 
 Alcanza con una de las dos opciones:
 
@@ -101,8 +105,8 @@ src/
 ├── features/            # un módulo por área del backoffice
 │   ├── dashboard/       # métricas globales de la plataforma
 │   ├── health/          # estado de los microservicios (E5-H11)
-│   └── moderation/      # cola de denuncias (E5-H7)
-├── services/            # cliente Axios configurado por entorno
+│   ├── moderation/      # cola de denuncias (E5-H7)
+│   └── users/           # gestión y búsqueda de usuarios (E5-H4, E5-H5)
 ├── stores/              # estado global con Zustand
 ├── test/setup.ts        # polyfills de jsdom para Mantine
 ├── theme.ts             # tema de Mantine

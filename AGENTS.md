@@ -6,7 +6,7 @@ Backoffice web administrativo para monitoreo de plataforma, auditoría y moderac
 
 ## Stack y herramientas
 
-- Framework y runtime: React 19, Vite 8, TypeScript, Bun
+- Framework y runtime: React 19 (con React Compiler activado), Vite 8, TypeScript, Bun (`bun.lock`)
 - UI Library: Mantine 9 (@mantine/core, @mantine/hooks, @mantine/form)
 - Estado y queries: Zustand, TanStack React Query
 - Ruteo: TanStack Router (code-based, tipado en `src/router.tsx`)
@@ -29,7 +29,7 @@ docker compose -f docker/docker-compose.dev.yml up --build
 
 ## Arquitectura y particularidades locales
 
-- Módulos por dominio en `src/features/` (`dashboard`, `health`, `moderation`).
+- Módulos por dominio en `src/features/` (`dashboard`, `health`, `moderation`, `users`).
 - Shell y layout compartido en `src/components/layout/AppLayout.tsx`.
 - Árbol de rutas y router tipado en `src/router.tsx`, montado con `RouterProvider` en `src/main.tsx`.
 - Documentación general del sistema: consultar `../udesa-x-platform/docs/` (`ARQUITECTURA.md`, `CONVENCIONES.md`, `PLANIFICACION.md`).
