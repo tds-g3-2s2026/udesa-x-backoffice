@@ -5,7 +5,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { theme } from './theme';
 import { router } from './router';
+import { apiClient } from './services/apiClient';
+import { attachSessionGuard } from './features/auth/sessionGuard';
 import '@mantine/core/styles.css';
+
+attachSessionGuard(apiClient);
 
 const queryClient = new QueryClient({
   defaultOptions: {
