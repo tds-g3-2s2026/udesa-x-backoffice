@@ -84,6 +84,37 @@ Con reporte de cobertura:
 bun run test:coverage
 ```
 
+### Como los corre el CI: dentro de la imagen
+
+Lo de arriba corre sobre tu máquina y sirve para iterar. **El CI los corre adentro de la imagen
+Docker**, que es lo que hace que el resultado no dependa de cómo esté armada la máquina. El
+`Dockerfile` tiene un stage `test` que suma la suite sobre el mismo build de dependencias que
+usa producción.
+
+Para reproducirlo:
+
+```bash
+docker compose -f docker/docker-compose.dev.yml run --rm --build tests
+```
+
+El `--build` no es opcional: sin él, el compose corre la imagen cacheada y podrías estar
+verificando código viejo.
+
+Ese servicio **no monta el código como volumen** a propósito: montarlo reemplazaría lo que hay
+en la imagen por lo que hay en el disco, y se dejaría de probar el artefacto real.
+
+La versión de Bun está fijada en `.bun-version` y en el `Dockerfile`. Sin eso, cada máquina
+prueba con la versión que tenga instalada.
+
+**La cobertura se mide con Istanbul y no con V8.** El proveedor por defecto de Vitest fusiona
+rangos de cobertura del motor con un algoritmo recursivo que desborda el stack en Linux con
+esta suite: pasaba en Windows y fallaba adentro del contenedor. Istanbul instrumenta el código
+fuente y no tiene ese problema.
+
+Se mide `src/` entero, no solo lo que los tests importan: sin `all: true`, un archivo que nadie
+testea simplemente no aparece y el porcentaje describe únicamente lo que alguien se acordó de
+cubrir.
+
 ## Linter y formato
 
 ```bash
