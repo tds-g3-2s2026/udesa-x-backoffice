@@ -18,3 +18,13 @@ services:
       - ../vite.config.ts:/app/vite.config.ts
       - /app/node_modules
     restart: unless-stopped
+
+  # No source volume on purpose: mounting it would replace what the image
+  # carries and stop testing the real artifact.
+  tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: test
+    # Without this it would start on every `docker compose up`.
+    profiles: ['test']

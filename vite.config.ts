@@ -18,9 +18,20 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // JUnit next to the coverage report: the CI pulls both out of the container
+    // from the same directory.
+    outputFile: { junit: 'coverage/junit.xml' },
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      // istanbul and not v8: merging V8 coverage ranges overflows the stack
+      // on Linux with this suite, so it passed locally and failed in the image.
+      provider: 'istanbul',
+      // cobertura is what the reusable workflow parses, the same format the
+      // Python services emit.
+      reporter: ['text', 'cobertura'],
+      // `include` reports every matching file, tested or not: otherwise the
+      // percentage only describes what somebody already remembered to cover.
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/main.tsx', 'src/test/**', '**/*.d.ts'],
     },
   },
 });
