@@ -16,7 +16,7 @@ import {
   Box,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { Outlet, useNavigate, useLocation } from '@tanstack/react-router';
+import { Navigate, Outlet, useNavigate, useLocation } from '@tanstack/react-router';
 import {
   IconDashboard,
   IconHeartbeat,
@@ -34,18 +34,36 @@ import {
   IconAdjustments,
 } from '@tabler/icons-react';
 import { useAuthStore } from '../../stores/authStore';
+import { adminLogout } from '../../features/auth/api';
 import { GlobalSearchBar } from './GlobalSearchBar';
+
 export const AppLayout: React.FC = () => {
   const [opened, { toggle }] = useDisclosure();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuthStore();
+  const { user, signOut } = useAuthStore();
   const { colorScheme, toggleColorScheme } = useMantineColorScheme();
 
-  const handleLogout = () => {
-    logout();
-    navigate({ to: '/' });
+  // The route guard checks the session on navigation; this covers the session
+  // ending while a screen is open, which is what a 401 from the API does.
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  const handleLogout = async () => {
+    try {
+      // Best effort: the token is dropped locally either way, and it expires
+      // on its own if the backend could not be told.
+      await adminLogout();
+    } catch {
+      // Nothing to do: the local session is dropped regardless.
+    }
+    signOut();
+    void navigate({ to: '/login' });
   };
+
+  const canManageUsers = user.role === 'superadmin';
+
   return (
     <AppShell
       header={{ height: 64 }}
@@ -133,14 +151,14 @@ export const AppLayout: React.FC = () => {
                 >
                   <Group gap="xs" wrap="nowrap">
                     <Avatar color="blue" radius="xl" size="sm">
-                      {user?.email ? user.email.slice(0, 2).toUpperCase() : 'AD'}
+                      {user.email.slice(0, 2).toUpperCase()}
                     </Avatar>
                     <Box visibleFrom="md" style={{ textAlign: 'left', lineHeight: 1.2 }}>
                       <Text size="sm" fw={600}>
-                        {user?.email ? user.email.split('@')[0] : 'admin_udesa'}
+                        {user.email.split('@')[0]}
                       </Text>
                       <Text size="xs" c="dimmed">
-                        {user?.role ? user.role.toUpperCase() : 'SUPERADMIN'}
+                        {user.role.toUpperCase()}
                       </Text>
                     </Box>
                     <IconChevronDown size={14} stroke={1.5} color="gray" />
@@ -152,10 +170,10 @@ export const AppLayout: React.FC = () => {
                 <Menu.Label>Signed in as</Menu.Label>
                 <Box px="xs" pb="xs">
                   <Text size="xs" fw={700}>
-                    {user?.email || 'admin@udesa-x.local'}
+                    {user.email}
                   </Text>
                   <Badge size="xs" color="blue" variant="dot" mt={4}>
-                    {user?.role ? `Role: ${user.role}` : 'Role: SuperAdmin'}
+                    {`Role: ${user.role}`}
                   </Badge>
                 </Box>
 
@@ -228,12 +246,14 @@ export const AppLayout: React.FC = () => {
             active={location.pathname === '/moderation'}
             onClick={() => navigate({ to: '/moderation' })}
           />
-          <NavLink
-            label="User Management"
-            leftSection={<IconUsers size={20} stroke={1.5} />}
-            active={location.pathname === '/users'}
-            onClick={() => navigate({ to: '/users' })}
-          />
+          {canManageUsers && (
+            <NavLink
+              label="User Management"
+              leftSection={<IconUsers size={20} stroke={1.5} />}
+              active={location.pathname === '/users'}
+              onClick={() => navigate({ to: '/users' })}
+            />
+          )}
         </AppShell.Section>
 
         <AppShell.Section>

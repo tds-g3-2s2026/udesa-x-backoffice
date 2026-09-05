@@ -48,6 +48,24 @@ bun run dev
 
 Queda servido en `http://localhost:5173`. Es más rápido que el contenedor para iterar, y es el modo en el que conviene correr los tests y el linter.
 
+## Entrar al backoffice
+
+Todas las pantallas piden sesión. Sin sesión, cualquier URL redirige a `/login` y vuelve a la
+URL original después de entrar. Se entra con email y contraseña contra `POST /admin/auth/login`
+de `users-api`, que solo acepta cuentas con rol `moderator` o `superadmin`; un usuario común de
+la app recibe `403` y tres contraseñas equivocadas bloquean la cuenta por 30 minutos (`E5-H2`).
+
+Con el `users-api` levantado por su `docker-compose.dev.yml` ya existe un superadmin sembrado:
+`admin@udesa.edu.ar` / `Admin1234`. Ese compose también habilita CORS para `localhost:5173` y
+`localhost:5174`; si el backoffice corre en otro origen, hay que sumarlo a `CORS_ALLOWED_ORIGINS`.
+
+La sesión es el access token del backend, guardado en `localStorage` y decodificado en el cliente
+para leer el rol y el vencimiento (`src/stores/authStore.ts`). No se verifica la firma: eso lo hace
+el backend en cada pedido. Un `401` de cualquier endpoint cierra la sesión y manda al login
+(`src/features/auth/sessionGuard.ts`). El rol solo decide qué se muestra: "User Management"
+(`/users`) aparece y responde únicamente para `superadmin`, pero el backend rechaza igual a un
+moderador que llegue por la API.
+
 ## Correr los tests
 
 ```bash
@@ -101,18 +119,24 @@ docker run --rm -p 8080:80 udesa-x-backoffice
 
 ```text
 src/
-├── components/layout/   # AppShell, navegación y header
+├── components/
+│   ├── layout/          # AppShell, navegación y header
+│   ├── form/            # TextField, PasswordField, SubmitButton
+│   ├── feedback/        # ProblemAlert: errores del backend en formato Problem Details
+│   └── data/            # DataTable con estados cargando, vacío y error
 ├── features/            # un módulo por área del backoffice
+│   ├── auth/            # login, sesión y guardia de 401 (E5-H2)
 │   ├── dashboard/       # métricas globales de la plataforma
 │   ├── health/          # estado de los microservicios (E5-H11)
 │   ├── moderation/      # cola de denuncias (E5-H7)
 │   └── users/           # gestión y búsqueda de usuarios (E5-H4, E5-H5)
-├── stores/              # estado global con Zustand
+├── services/apiClient.ts # cliente Axios y normalización de errores (toApiError)
+├── stores/              # estado global con Zustand (sesión en authStore)
 ├── test/setup.ts        # polyfills de jsdom para Mantine
-├── theme.ts             # tema de Mantine
-├── router.tsx           # árbol de rutas tipado de TanStack Router
+├── theme.ts             # tema de Mantine y defaults de los componentes
+├── router.tsx           # árbol de rutas tipado de TanStack Router, con guardias de sesión y rol
 └── main.tsx             # punto de entrada y providers
-tests/unit/              # tests de componentes con Vitest
+tests/unit/              # tests de componentes, store, router y login con Vitest
 docker/
 ├── Dockerfile              # multi-stage: base, dev, builder y runner Nginx
 ├── docker-compose.dev.yml  # dev server con hot reload
@@ -123,6 +147,10 @@ scripts/
 ```
 
 Cada área nueva del backoffice entra como una carpeta más en `src/features/`, con sus `pages/`, sus componentes y sus hooks adentro. La regla es que un feature no importe archivos de otro: lo compartido vive en `src/components/`, `src/services/` o `src/stores/`.
+
+Los formularios y tablas se construyen con las piezas de `src/components/` (`T-19`), no con
+`TextInput`, `Button` o `Table` de Mantine directamente: así todas las pantallas muestran los
+errores del backend igual y comparten los defaults del tema.
 
 ## Code Guidelines (Reglas del Equipo)
 
