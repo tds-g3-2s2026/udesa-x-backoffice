@@ -160,7 +160,7 @@ src/
 │   ├── dashboard/       # métricas globales de la plataforma
 │   ├── health/          # estado de los microservicios (E5-H11)
 │   ├── moderation/      # cola de denuncias (E5-H7)
-│   └── users/           # gestión y búsqueda de usuarios (E5-H4, E5-H5)
+│   └── users/           # alta de administradores y sus credenciales (E5-H1)
 ├── services/apiClient.ts # cliente Axios y normalización de errores (toApiError)
 ├── stores/              # estado global con Zustand (sesión en authStore)
 ├── test/setup.ts        # polyfills de jsdom para Mantine

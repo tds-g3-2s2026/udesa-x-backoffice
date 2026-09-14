@@ -248,7 +248,7 @@ export const AppLayout: React.FC = () => {
           />
           {canManageUsers && (
             <NavLink
-              label="User Management"
+              label="Administradores"
               leftSection={<IconUsers size={20} stroke={1.5} />}
               active={location.pathname === '/users'}
               onClick={() => navigate({ to: '/users' })}
