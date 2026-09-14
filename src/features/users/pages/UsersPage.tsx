@@ -18,6 +18,8 @@ const ROLE_LABELS: Record<string, string> = {
   moderator: 'Moderador',
 };
 
+// 24 hour time on purpose: the badge uppercases its content, and the Spanish
+// 12 hour suffix reads as "04:17 A. M." in there.
 const formatDeadline = (iso: string | null): string =>
   iso
     ? new Date(iso).toLocaleString('es-AR', {
@@ -25,6 +27,7 @@ const formatDeadline = (iso: string | null): string =>
         month: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
+        hour12: false,
       })
     : '';
 
