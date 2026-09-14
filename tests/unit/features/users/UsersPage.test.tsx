@@ -32,13 +32,19 @@ const administrator = (overrides: Partial<Administrator> = {}): Administrator =>
 
 const problem = (status: number, code: string, title: string, detail: string) => {
   const config = { headers: new AxiosHeaders() } as InternalAxiosRequestConfig;
-  return new AxiosError('Request failed', 'ERR_BAD_REQUEST', config, {}, {
-    status,
-    statusText: '',
-    headers: {},
+  return new AxiosError(
+    'Request failed',
+    'ERR_BAD_REQUEST',
     config,
-    data: { type: `https://udesa-x.dev/errors/${code}`, title, status, detail },
-  });
+    {},
+    {
+      status,
+      statusText: '',
+      headers: {},
+      config,
+      data: { type: `https://udesa-x.dev/errors/${code}`, title, status, detail },
+    }
+  );
 };
 
 const fillCreationForm = (email: string, handle: string) => {
