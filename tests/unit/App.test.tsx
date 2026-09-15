@@ -48,22 +48,22 @@ describe('Backoffice App Shell', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows user management to a superadmin only', async () => {
+  it('shows the administrators screen to a superadmin only', async () => {
     signInAs('superadmin');
     renderAt('/users');
 
-    expect(await screen.findByRole('heading', { name: 'User Management' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Administradores' })).toBeInTheDocument();
     // Heading plus the navigation entry.
-    expect(screen.getAllByText('User Management')).toHaveLength(2);
+    expect(screen.getAllByText('Administradores')).toHaveLength(2);
   });
 
-  it('keeps a moderator out of user management, in the menu and by URL', async () => {
+  it('keeps a moderator out of the administrators screen, in the menu and by URL', async () => {
     signInAs('moderator');
     const router = renderAt('/users');
 
     expect(await screen.findByText('Platform Overview')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
-    expect(screen.queryByText('User Management')).not.toBeInTheDocument();
+    expect(screen.queryByText('Administradores')).not.toBeInTheDocument();
   });
 
   it('sends a signed-in administrator away from the login', async () => {

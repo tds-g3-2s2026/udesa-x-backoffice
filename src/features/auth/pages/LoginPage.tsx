@@ -30,7 +30,17 @@ export const LoginPage: React.FC = () => {
     // argument that the API function has no business receiving.
     mutationFn: (credentials: AdminCredentials) => adminLogin(credentials),
     onSuccess: (response, credentials) => {
-      signIn({ token: response.access_token, email: credentials.email });
+      signIn({
+        token: response.access_token,
+        email: credentials.email,
+        mustChangePassword: response.must_change_password,
+      });
+      // A temporary password gets nowhere else: the backend answers 403 to
+      // everything until it is replaced, so the redirect is ignored.
+      if (response.must_change_password) {
+        void navigate({ to: '/change-password' });
+        return;
+      }
       void navigate({ href: safeRedirect(redirect) });
     },
   });

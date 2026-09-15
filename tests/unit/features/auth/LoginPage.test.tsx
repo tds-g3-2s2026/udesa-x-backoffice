@@ -37,6 +37,14 @@ const problem = (status: number, code: string, detail: string, headers = {}) => 
   );
 };
 
+const session = (overrides: Partial<LoginResponse> = {}): LoginResponse => ({
+  access_token: fakeToken(),
+  token_type: 'bearer',
+  expires_in: 900,
+  must_change_password: false,
+  ...overrides,
+});
+
 const renderLogin = (search = '') => {
   const router = createRouter({
     routeTree,
@@ -71,7 +79,7 @@ describe('LoginPage', () => {
 
   it('signs in and lands on the page the visitor was heading to', async () => {
     const token = fakeToken({ role: 'superadmin' });
-    mockedLogin.mockResolvedValue({ access_token: token, token_type: 'bearer', expires_in: 900 });
+    mockedLogin.mockResolvedValue(session({ access_token: token }));
     const router = renderLogin('?redirect=%2Fhealth');
     await screen.findByRole('button', { name: 'Ingresar' });
 
@@ -92,17 +100,24 @@ describe('LoginPage', () => {
   });
 
   it('ignores a redirect that points outside the app', async () => {
-    mockedLogin.mockResolvedValue({
-      access_token: fakeToken(),
-      token_type: 'bearer',
-      expires_in: 900,
-    });
+    mockedLogin.mockResolvedValue(session());
     const router = renderLogin('?redirect=https%3A%2F%2Fevil.example');
     await screen.findByRole('button', { name: 'Ingresar' });
 
     submit('admin@udesa.edu.ar', 'Admin1234');
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+  });
+
+  it('sends an account on a temporary password to choose one, ignoring the redirect', async () => {
+    mockedLogin.mockResolvedValue(session({ must_change_password: true }));
+    const router = renderLogin('?redirect=%2Fhealth');
+    await screen.findByRole('button', { name: 'Ingresar' });
+
+    submit('nueva@udesa.edu.ar', 'Temporal123');
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/change-password'));
+    expect(useAuthStore.getState().mustChangePassword).toBe(true);
   });
 
   it('shows the backend message on wrong credentials and keeps the session empty', async () => {
@@ -153,7 +168,7 @@ describe('LoginPage', () => {
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'Ingresar' })).toBeDisabled());
     expect(screen.getByLabelText(/Email/)).toBeDisabled();
-    finish({ access_token: fakeToken(), token_type: 'bearer', expires_in: 900 });
+    finish(session());
     await waitFor(() => expect(useAuthStore.getState().user).not.toBeNull());
   });
 });

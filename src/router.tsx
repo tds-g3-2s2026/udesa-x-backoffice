@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router';
 import { AppLayout } from './components/layout/AppLayout';
+import { ChangePasswordPage } from './features/auth/pages/ChangePasswordPage';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { HealthPage } from './features/health/pages/HealthPage';
@@ -25,6 +26,25 @@ const loginRoute = createRoute({
 });
 
 /**
+ * Outside the shell on purpose: an account on a temporary password has no
+ * navigation to offer, and the backend refuses every other endpoint anyway.
+ */
+const changePasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/change-password',
+  beforeLoad: () => {
+    const { token, mustChangePassword } = useAuthStore.getState();
+    if (!token) {
+      throw redirect({ to: '/login' });
+    }
+    if (!mustChangePassword) {
+      throw redirect({ to: '/' });
+    }
+  },
+  component: ChangePasswordPage,
+});
+
+/**
  * Everything under the shell needs a session. The check runs before any child
  * loads, and the original address travels along so the user lands back on it.
  */
@@ -32,8 +52,12 @@ const authenticatedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'authenticated',
   beforeLoad: ({ location }) => {
-    if (!useAuthStore.getState().token) {
+    const { token, mustChangePassword } = useAuthStore.getState();
+    if (!token) {
       throw redirect({ to: '/login', search: { redirect: location.href } });
+    }
+    if (mustChangePassword) {
+      throw redirect({ to: '/change-password' });
     }
   },
   component: AppLayout,
@@ -71,6 +95,7 @@ const usersRoute = createRoute({
 
 export const routeTree = rootRoute.addChildren([
   loginRoute,
+  changePasswordRoute,
   authenticatedRoute.addChildren([dashboardRoute, healthRoute, moderationRoute, usersRoute]),
 ]);
 
