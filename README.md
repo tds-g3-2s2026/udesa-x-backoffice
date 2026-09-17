@@ -27,10 +27,10 @@ docker compose -f docker/docker-compose.dev.yml up --build
 
 Levanta el dev server de Vite con hot reload en `http://localhost:5173`. El compose monta `src/`, `public/`, `index.html` y `vite.config.ts` desde el host, así que los cambios en el editor se reflejan en el navegador sin reconstruir la imagen.
 
-Acepta dos variables: `PORT`, el puerto publicado en el host (por defecto `5173`), y `VITE_API_URL`, la URL del backend que consume el cliente Axios (por defecto `http://localhost:8000`, el `users-api` local). Se pasan por entorno o por un archivo `.env` dentro de `docker/`:
+Acepta dos variables: `PORT`, el puerto publicado en el host (por defecto `5173`), y `VITE_API_URL`, la URL del backend que consume el cliente Axios (por defecto `http://localhost:8000/api`, el `users-api` local). El sufijo `/api` no es opcional: todos los servicios publican sus endpoints bajo ese prefijo. Se pasan por entorno o por un archivo `.env` dentro de `docker/`:
 
 ```bash
-PORT=3000 VITE_API_URL=http://localhost:8000 docker compose -f docker/docker-compose.dev.yml up --build
+PORT=3000 VITE_API_URL=http://localhost:8000/api docker compose -f docker/docker-compose.dev.yml up --build
 ```
 
 Para bajarlo:
