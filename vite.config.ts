@@ -1,8 +1,19 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { loadEnv } from 'vite';
 
 export default defineConfig({
   plugins: [
+    {
+      name: 'require-api-url',
+      apply: 'build',
+      configResolved(config) {
+        const env = loadEnv(config.mode, config.envDir, 'VITE_');
+        if (!env.VITE_API_URL?.trim()) {
+          throw new Error('VITE_API_URL is required for production builds.');
+        }
+      },
+    },
     react({
       compiler: true,
     }),

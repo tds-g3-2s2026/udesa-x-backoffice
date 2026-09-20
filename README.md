@@ -129,22 +129,59 @@ bun run format
 
 ## Build de producción
 
+El destino productivo es **S3 con CloudFront**, no el cluster de Kubernetes. El backoffice
+es una SPA: S3 guarda los archivos de `dist/`, CloudFront los sirve por HTTPS y el navegador
+consulta la API a través del ingress. No necesita pods ni Services, por eso no hay carpeta
+`k8s/`. El marco de despliegue y el prefijo `/api` están definidos en
+[ADR-008](https://github.com/tds-g3-2s2026/udesa-x-platform/blob/main/docs/adr/ADR-008-plataforma-de-despliegue.md).
+
+`VITE_API_URL` es obligatoria para compilar y debe incluir `/api`. Vite la incorpora al
+JavaScript durante el build: no es un secreto y cambiarla requiere recompilar. El valor
+local por defecto queda reservado para desarrollo. Ejemplo sin acceso a AWS, con una URL
+de prueba que se debe reemplazar por la URL pública del ingress al desplegar:
+
 ```bash
-bun run build
+VITE_API_URL=https://api.example.invalid/api bun run build
 ```
 
-Corre `tsc -b` sobre `src/` y `tests/` y, si el tipado pasa, deja el bundle estático en `dist/`. Para servirlo localmente igual que en producción:
+Corre `tsc -b` sobre `src/` y `tests/` y, si el tipado pasa, deja el bundle estático en `dist/`.
+Sin `VITE_API_URL`, la compilación falla para evitar publicar un cliente apuntando a localhost.
+El CI verifica este build con una URL de prueba y no necesita credenciales de AWS.
+Para servir el resultado localmente:
 
 ```bash
 bun run preview
 ```
 
-La imagen de producción se construye con el stage `runner` del mismo Dockerfile, que sirve `dist/` desde Nginx con fallback de SPA (`try_files $uri $uri/ /index.html`) para que las rutas de TanStack Router funcionen al recargar la página:
+El stage `runner` del Dockerfile queda como alternativa de verificación local, no como
+destino de despliegue. Sirve `dist/` desde Nginx con fallback de SPA
+(`try_files $uri $uri/ /index.html`) para que las rutas funcionen al recargar la página:
 
 ```bash
-docker build -f docker/Dockerfile --target runner -t udesa-x-backoffice .
-docker run --rm -p 8080:80 udesa-x-backoffice
+docker build -f docker/Dockerfile --target runner --build-arg VITE_API_URL=https://api.example.invalid/api -t udesa-x-backoffice .
+docker run --rm -p 127.0.0.1:8080:80 udesa-x-backoffice
 ```
+
+### Configuración del futuro despliegue
+
+Configurar en GitHub Actions estos secrets cuando la cátedra entregue los recursos:
+
+| Secret                       | Valor esperado                 | Uso                                                                       |
+| ---------------------------- | ------------------------------ | ------------------------------------------------------------------------- |
+| `S3_BUCKET`                  | Nombre del bucket, sin `s3://` | Publicar el contenido de `dist/`.                                         |
+| `CLOUDFRONT_DISTRIBUTION_ID` | ID de la distribución          | Invalidar la caché después de publicar.                                   |
+| `AWS_ROLE_ARN`               | ARN del rol de despliegue      | Asumir el rol desde GitHub Actions mediante OIDC, sin claves permanentes. |
+
+Son identificadores de infraestructura, no credenciales de acceso por sí solos.
+El rol deberá confiar en el repositorio y tener permisos sobre ese bucket y para invalidar
+esa distribución; no alcanza con que tenga permisos sobre EKS.
+Como variables de Actions, definir `AWS_REGION` y `VITE_API_URL` (URL HTTPS del ingress,
+incluido `/api`), esta última disponible durante el build.
+
+La publicación real queda pendiente de acceso a AWS. Al configurarla, el bucket debe quedar
+privado detrás de CloudFront y las rutas de la SPA deben resolver a `index.html`.
+La API debe permitir el origen del backoffice por CORS. Este repositorio todavía no incluye
+un workflow de despliegue; no se necesitan manifiestos Kubernetes para agregarlo.
 
 ## Estructura
 
