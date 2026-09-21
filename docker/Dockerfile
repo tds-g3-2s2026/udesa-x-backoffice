@@ -30,6 +30,7 @@ CMD ["bun", "run", "test:ci"]
 FROM base AS builder
 WORKDIR /app
 COPY . .
+ARG VITE_API_URL
 RUN bun run build
 
 # Stage 4: Production (Nginx)
