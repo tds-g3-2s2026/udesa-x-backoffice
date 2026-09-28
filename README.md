@@ -162,26 +162,25 @@ docker build -f docker/Dockerfile --target runner --build-arg VITE_API_URL=https
 docker run --rm -p 127.0.0.1:8080:80 udesa-x-backoffice
 ```
 
-### Configuración del futuro despliegue
+### Despliegue
 
-Configurar en GitHub Actions estos secrets cuando la cátedra entregue los recursos:
+Cada push a `main` que pasa el CI publica el backoffice: el job `deploy` de
+`.github/workflows/ci.yml` compila con la URL de producción, sube `dist/` al bucket con
+`aws s3 sync --delete` e invalida la caché de CloudFront. Entra a AWS por OIDC con el rol del
+grupo, sin claves permanentes.
 
-| Secret                       | Valor esperado                 | Uso                                                                       |
-| ---------------------------- | ------------------------------ | ------------------------------------------------------------------------- |
-| `S3_BUCKET`                  | Nombre del bucket, sin `s3://` | Publicar el contenido de `dist/`.                                         |
-| `CLOUDFRONT_DISTRIBUTION_ID` | ID de la distribución          | Invalidar la caché después de publicar.                                   |
-| `AWS_ROLE_ARN`               | ARN del rol de despliegue      | Asumir el rol desde GitHub Actions mediante OIDC, sin claves permanentes. |
+Usa cuatro secrets de organización: `AWS_ROLE_ARN`, `AWS_REGION`, `S3_BUCKET` y
+`CLOUDFRONT_DISTRIBUTION_ID`. Si falta alguno, el job lo nombra y corta antes de tocar AWS.
 
-Son identificadores de infraestructura, no credenciales de acceso por sí solos.
-El rol deberá confiar en el repositorio y tener permisos sobre ese bucket y para invalidar
-esa distribución; no alcanza con que tenga permisos sobre EKS.
-Como variables de Actions, definir `AWS_REGION` y `VITE_API_URL` (URL HTTPS del ingress,
-incluido `/api`), esta última disponible durante el build.
+`VITE_API_URL` va escrita en el workflow y no como secret: es
+`https://tds-group-3.tds-linar.udesa.edu.ar/api`, el mismo dominio que sirve el backoffice.
+CloudFront manda `/api/*` al ALB y el resto al bucket, así que el navegador ve un solo origen y
+no hace falta configurar CORS.
 
-La publicación real queda pendiente de acceso a AWS. Al configurarla, el bucket debe quedar
-privado detrás de CloudFront y las rutas de la SPA deben resolver a `index.html`.
-La API debe permitir el origen del backoffice por CORS. Este repositorio todavía no incluye
-un workflow de despliegue; no se necesitan manifiestos Kubernetes para agregarlo.
+El bucket es privado: solo lo lee la distribución, a través de su OAC. Las rutas de la SPA las
+resuelve una CloudFront Function asociada al behavior por defecto, que reescribe a `/index.html`
+todo lo que no tiene extensión. No se usan las _custom error responses_ de la distribución,
+porque también reescribirían los errores reales de `/api/*`.
 
 ## Estructura
 
