@@ -17,6 +17,21 @@ Alcanza con una de las dos opciones:
 
 Para correr los scripts de `scripts/` hace falta además Bash, que ya viene en Linux y macOS.
 
+## El backend en desarrollo
+
+El backoffice le habla al backend a través del gateway, igual que en producción. El dev server de
+Vite reenvía todo `/api` al gateway, así que el navegador ve un solo origen y ningún servicio
+necesita habilitar CORS para el backoffice. Antes de levantarlo, hay que tener corriendo, cada uno
+con su `docker-compose.dev.yml`:
+
+| Servicio      | Puerto en el host |
+| ------------- | ----------------- |
+| `users-api`   | `8000`            |
+| `posts-api`   | `8001`            |
+| `api-gateway` | `8002`            |
+
+Sin el gateway, cualquier pedido a `/api` falla, también el login.
+
 ## Levantarlo en desarrollo con Docker
 
 Es el camino que verifica el criterio de aceptación de la issue #3 y el que no necesita nada instalado más que Docker:
@@ -27,10 +42,14 @@ docker compose -f docker/docker-compose.dev.yml up --build
 
 Levanta el dev server de Vite con hot reload en `http://localhost:5173`. El compose monta `src/`, `public/`, `index.html` y `vite.config.ts` desde el host, así que los cambios en el editor se reflejan en el navegador sin reconstruir la imagen.
 
-Acepta dos variables: `PORT`, el puerto publicado en el host (por defecto `5173`), y `VITE_API_URL`, la URL del backend que consume el cliente Axios (por defecto `http://localhost:8000/api`, el `users-api` local). El sufijo `/api` no es opcional: todos los servicios publican sus endpoints bajo ese prefijo. Se pasan por entorno o por un archivo `.env` dentro de `docker/`:
+Acepta tres variables, por entorno o por un archivo `.env` dentro de `docker/`:
+
+- `PORT`: el puerto publicado en el host (por defecto `5173`).
+- `API_PROXY_TARGET`: a dónde reenvía Vite los pedidos a `/api` (por defecto `http://host.docker.internal:8002`, el gateway del host).
+- `VITE_API_URL`: la URL del backend que consume el cliente Axios. Vacía por defecto, y entonces el cliente usa `/api` en su propio origen. Si se cambia, el sufijo `/api` no es opcional: todos los servicios publican sus endpoints bajo ese prefijo.
 
 ```bash
-PORT=3000 VITE_API_URL=http://localhost:8000/api docker compose -f docker/docker-compose.dev.yml up --build
+PORT=3000 API_PROXY_TARGET=http://host.docker.internal:9000 docker compose -f docker/docker-compose.dev.yml up --build
 ```
 
 Para bajarlo:
@@ -46,7 +65,7 @@ bun install
 bun run dev
 ```
 
-Queda servido en `http://localhost:5173`. Es más rápido que el contenedor para iterar, y es el modo en el que conviene correr los tests y el linter.
+Queda servido en `http://localhost:5173`, y reenvía `/api` al gateway en `http://localhost:8002`; con `API_PROXY_TARGET` se apunta a otro. Es más rápido que el contenedor para iterar, y es el modo en el que conviene correr los tests y el linter.
 
 ## Entrar al backoffice
 
@@ -56,8 +75,7 @@ de `users-api`, que solo acepta cuentas con rol `moderator` o `superadmin`; un u
 la app recibe `403` y tres contraseñas equivocadas bloquean la cuenta por 30 minutos (`E5-H2`).
 
 Con el `users-api` levantado por su `docker-compose.dev.yml` ya existe un superadmin sembrado:
-`admin@udesa.edu.ar` / `Admin1234`. Ese compose también habilita CORS para `localhost:5173` y
-`localhost:5174`; si el backoffice corre en otro origen, hay que sumarlo a `CORS_ALLOWED_ORIGINS`.
+`admin@udesa.edu.ar` / `Admin1234`. El login llega a `users-api` a través del gateway.
 
 La sesión es el access token del backend, guardado en `localStorage` y decodificado en el cliente
 para leer el rol y el vencimiento (`src/stores/authStore.ts`). No se verifica la firma: eso lo hace

@@ -10,7 +10,13 @@ services:
     ports:
       - '${PORT:-5173}:5173'
     environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+      # Empty keeps the client on /api of its own origin, which Vite hands to the gateway.
+      VITE_API_URL: ${VITE_API_URL:-}
+      # The gateway run by its own docker-compose.dev.yml on the host.
+      API_PROXY_TARGET: ${API_PROXY_TARGET:-http://host.docker.internal:8002}
+    extra_hosts:
+      # Docker Desktop resolves it on its own; Linux needs the mapping.
+      - 'host.docker.internal:host-gateway'
     volumes:
       - ../src:/app/src
       - ../public:/app/public
