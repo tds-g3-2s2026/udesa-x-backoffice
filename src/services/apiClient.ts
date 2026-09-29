@@ -2,8 +2,9 @@ import axios, { isAxiosError } from 'axios';
 
 // Every endpoint of every service hangs under /api: the cluster routes by path
 // with a single Ingress, so the prefix is what tells it which service a request
-// belongs to. It lives in the base URL and nowhere else.
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// belongs to. It lives in the base URL and nowhere else. Same origin by default:
+// in development the Vite server forwards /api to the gateway.
+const baseURL = import.meta.env.VITE_API_URL || '/api';
 
 export const apiClient = axios.create({
   baseURL,
