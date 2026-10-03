@@ -8,6 +8,9 @@ export type ServiceName = (typeof SERVICES)[number];
 /** Past this a service counts as down, whatever it answers later. */
 export const HEALTH_TIMEOUT_MS = 5000;
 
+/** Often enough to catch a failure while a screen showing it stays open. */
+export const HEALTH_REFRESH_INTERVAL_MS = 30_000;
+
 export interface ServiceHealth {
   version: string;
   latencyMs: number;

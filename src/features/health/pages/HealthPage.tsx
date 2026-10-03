@@ -2,10 +2,7 @@ import React from 'react';
 import { Badge, Button, Card, Group, Loader, Stack, Table, Text, Title } from '@mantine/core';
 import { useQueries } from '@tanstack/react-query';
 import { IconRefresh } from '@tabler/icons-react';
-import { SERVICES, fetchHealth } from '../api';
-
-// Often enough to catch a failure while the screen stays open.
-const REFRESH_INTERVAL_MS = 30_000;
+import { HEALTH_REFRESH_INTERVAL_MS, SERVICES, fetchHealth } from '../api';
 
 export const HealthPage: React.FC = () => {
   // One query per service, so each row settles on its own and a slow one holds no other back.
@@ -15,7 +12,7 @@ export const HealthPage: React.FC = () => {
       queryFn: () => fetchHealth(service),
       // A retry would push the red past the timeout, which is what marks a service as down.
       retry: false,
-      refetchInterval: REFRESH_INTERVAL_MS,
+      refetchInterval: HEALTH_REFRESH_INTERVAL_MS,
     })),
   });
 
