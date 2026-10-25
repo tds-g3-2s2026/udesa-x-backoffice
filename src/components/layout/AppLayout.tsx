@@ -246,6 +246,13 @@ export const AppLayout: React.FC = () => {
             active={location.pathname === '/moderation'}
             onClick={() => navigate({ to: '/moderation' })}
           />
+          {/* Any administrator: searching accounts is not managing administrators. */}
+          <NavLink
+            label="Usuarios"
+            leftSection={<IconSearch size={20} stroke={1.5} />}
+            active={location.pathname.startsWith('/users/')}
+            onClick={() => navigate({ to: '/users/search', search: {} })}
+          />
           {canManageUsers && (
             <NavLink
               label="Administradores"

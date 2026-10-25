@@ -5,6 +5,8 @@ import { LoginPage } from './features/auth/pages/LoginPage';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { HealthPage } from './features/health/pages/HealthPage';
 import { ModerationPage } from './features/moderation/pages/ModerationPage';
+import { AccountDetailPage } from './features/users/pages/AccountDetailPage';
+import { AccountSearchPage } from './features/users/pages/AccountSearchPage';
 import { UsersPage } from './features/users/pages/UsersPage';
 import { useAuthStore } from './stores/authStore';
 
@@ -93,10 +95,52 @@ const usersRoute = createRoute({
   component: UsersPage,
 });
 
+/**
+ * Searching app accounts and reading their detail (E5-H4) is open to any
+ * administrator. Both routes are siblings of `/users`, not its children, so
+ * they do not inherit its superadmin check.
+ */
+const accountSearchRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/users/search',
+  // The text lives in the address bar, so coming back from a detail keeps it.
+  validateSearch: (search: Record<string, unknown>): { q?: string } => ({
+    q: typeof search.q === 'string' ? search.q : undefined,
+  }),
+  component: function AccountSearchRoute() {
+    const { q = '' } = accountSearchRoute.useSearch();
+    const navigate = accountSearchRoute.useNavigate();
+    // Keyed by the text, so every new search starts again from its first page.
+    return (
+      <AccountSearchPage
+        key={q}
+        query={q}
+        onSearch={(next) => void navigate({ search: { q: next || undefined } })}
+      />
+    );
+  },
+});
+
+const accountDetailRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/users/$userId',
+  component: function AccountDetailRoute() {
+    const { userId } = accountDetailRoute.useParams();
+    return <AccountDetailPage userId={userId} />;
+  },
+});
+
 export const routeTree = rootRoute.addChildren([
   loginRoute,
   changePasswordRoute,
-  authenticatedRoute.addChildren([dashboardRoute, healthRoute, moderationRoute, usersRoute]),
+  authenticatedRoute.addChildren([
+    dashboardRoute,
+    healthRoute,
+    moderationRoute,
+    usersRoute,
+    accountSearchRoute,
+    accountDetailRoute,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });
