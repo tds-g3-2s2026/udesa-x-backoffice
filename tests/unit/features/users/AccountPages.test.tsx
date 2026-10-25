@@ -39,6 +39,8 @@ const account = (overrides: Partial<UserAccount> = {}): UserAccount => ({
   handle: '@mariag',
   display_name: 'María Gómez',
   status: 'active',
+  status_reason: null,
+  status_changed_at: null,
   is_email_verified: true,
   created_at: '2026-10-20T15:00:00Z',
   ...overrides,
@@ -63,9 +65,11 @@ const problem = (status: number, code: string, detail: string) =>
 const unreachable = () => new AxiosError('Network Error', 'ERR_NETWORK', config);
 
 const get = vi.spyOn(apiClient, 'get');
+const post = vi.spyOn(apiClient, 'post');
 
 beforeEach(() => {
   get.mockReset();
+  post.mockReset();
 });
 
 describe('AccountSearchPage', () => {
@@ -235,5 +239,56 @@ describe('AccountDetailPage', () => {
     // Without a display name, the handle is the title.
     expect(screen.getByRole('heading', { name: '@mariag' })).toBeInTheDocument();
     expect(screen.getByText('Activa')).toBeInTheDocument();
+  });
+
+  it('E5-H5.CA2 - the detail shows blocked after the action', async () => {
+    let stored = account();
+    answer(
+      async () => ok(stored),
+      async () => ok<AccountCounts>({ followers: 0, posts: 0 })
+    );
+    post.mockImplementation(async () => {
+      stored = account({
+        status: 'suspended',
+        status_reason: 'Spam reiterado',
+        status_changed_at: '2026-10-25T13:00:00Z',
+      });
+      return ok(undefined);
+    });
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Bloquear' }));
+    // The modal opens with a transition: the field is there a moment later.
+    fireEvent.change(await screen.findByLabelText(/Motivo/), {
+      target: { value: 'Spam reiterado' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Bloquear cuenta' }));
+
+    // Asked again after the block, not patched locally: what shows is what was stored.
+    expect(await screen.findByText('Bloqueada el 25/10/2026')).toBeInTheDocument();
+    expect(screen.getByText('Spam reiterado')).toBeInTheDocument();
+    expect(screen.getByText('Bloqueada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bloquear' })).not.toBeInTheDocument();
+    expect(post).toHaveBeenCalledWith('/admin/users/acc-1/block', { reason: 'Spam reiterado' });
+  });
+
+  it('shows why a blocked account was blocked, and does not offer to block it again', async () => {
+    answer(
+      async () =>
+        ok(
+          account({
+            status: 'suspended',
+            status_reason: 'Acoso a otros usuarios',
+            status_changed_at: '2026-10-21T10:00:00Z',
+          })
+        ),
+      async () => ok<AccountCounts>({ followers: 0, posts: 0 })
+    );
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('Acoso a otros usuarios')).toBeInTheDocument();
+    expect(screen.getByText('Bloqueada el 21/10/2026')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Bloquear' })).not.toBeInTheDocument();
   });
 });
