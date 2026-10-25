@@ -1,3 +1,4 @@
+import { AuditPage } from './features/audit/pages/AuditPage';
 import { createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router';
 import { AppLayout } from './components/layout/AppLayout';
 import { ChangePasswordPage } from './features/auth/pages/ChangePasswordPage';
@@ -130,6 +131,18 @@ const accountDetailRoute = createRoute({
   },
 });
 
+const auditRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/audit',
+  beforeLoad: () => {
+    const role = useAuthStore.getState().user?.role;
+    if (role !== 'superadmin' && role !== 'moderator') {
+      throw redirect({ to: '/' });
+    }
+  },
+  component: AuditPage,
+});
+
 export const routeTree = rootRoute.addChildren([
   loginRoute,
   changePasswordRoute,
@@ -140,6 +153,7 @@ export const routeTree = rootRoute.addChildren([
     usersRoute,
     accountSearchRoute,
     accountDetailRoute,
+    auditRoute,
   ]),
 ]);
 
