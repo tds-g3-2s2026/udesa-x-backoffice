@@ -264,6 +264,8 @@ describe('AccountDetailPage', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: 'Bloquear cuenta' }));
 
+    // The modal closes once the block went through.
+    await waitFor(() => expect(screen.queryByLabelText(/Motivo/)).not.toBeInTheDocument());
     // Asked again after the block, not patched locally: what shows is what was stored.
     expect(await screen.findByText('Bloqueada el 25/10/2026')).toBeInTheDocument();
     expect(screen.getByText('Spam reiterado')).toBeInTheDocument();
@@ -290,5 +292,39 @@ describe('AccountDetailPage', () => {
     expect(await screen.findByText('Acoso a otros usuarios')).toBeInTheDocument();
     expect(screen.getByText('Bloqueada el 21/10/2026')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Bloquear' })).not.toBeInTheDocument();
+  });
+
+  it('E5-H5.CA1 - the reason travels with the request, and a refusal keeps the modal open', async () => {
+    answer(
+      async () => ok(account()),
+      async () => ok<AccountCounts>({ followers: 0, posts: 0 })
+    );
+    post.mockRejectedValueOnce(
+      problem(
+        422,
+        'administrator-cannot-be-blocked',
+        'Las cuentas de administradores no se bloquean'
+      )
+    );
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Bloquear' }));
+    fireEvent.change(await screen.findByLabelText(/Motivo/), { target: { value: '  Spam  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Bloquear cuenta' }));
+
+    expect(
+      await screen.findByText('Las cuentas de administradores no se bloquean')
+    ).toBeInTheDocument();
+    expect(post).toHaveBeenCalledWith('/admin/users/acc-1/block', { reason: 'Spam' });
+    expect(screen.getByLabelText(/Motivo/)).toHaveValue('  Spam  ');
+
+    // Closed and opened again: the refusal belonged to the attempt that closed.
+    fireEvent.keyDown(screen.getByLabelText(/Motivo/), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByLabelText(/Motivo/)).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Bloquear' }));
+    expect(await screen.findByLabelText(/Motivo/)).toHaveValue('');
+    expect(
+      screen.queryByText('Las cuentas de administradores no se bloquean')
+    ).not.toBeInTheDocument();
   });
 });
