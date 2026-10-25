@@ -12,13 +12,15 @@ import {
   Text,
   Title,
 } from '@mantine/core';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { IconArrowLeft, IconBan } from '@tabler/icons-react';
-import { ProblemAlert } from '../../../components';
+import { ProblemAlert, ReasonModal } from '../../../components';
 import { toApiError } from '../../../services/apiClient';
-import { ACCOUNT_STATUS, getAccount, getAccountCounts } from '../api';
-import { BlockAccountModal } from '../components/BlockAccountModal';
+import { ACCOUNT_STATUS, blockAccount, getAccount, getAccountCounts } from '../api';
+
+/** Same limit users-api applies to the reason of a block. */
+const BLOCK_REASON_MAX_LENGTH = 500;
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -64,6 +66,23 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
     queryKey: ['account-counts', userId],
     queryFn: () => getAccountCounts(userId),
   });
+  const block = useMutation({
+    mutationFn: (reason: string) => blockAccount(userId, reason),
+    onSuccess: () => {
+      block.reset();
+      setBlocking(false);
+      // The detail shows the new state and its reason, and the search does not
+      // keep listing the account as it was.
+      void queryClient.invalidateQueries({ queryKey: ['account', userId] });
+      void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    },
+  });
+
+  // The last error belongs to the attempt that is closing.
+  const closeBlocking = () => {
+    block.reset();
+    setBlocking(false);
+  };
 
   if (account.isPending) {
     return (
@@ -86,14 +105,6 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
   const { data } = account;
   const status = ACCOUNT_STATUS[data.status];
   const blocked = data.status === 'suspended';
-
-  const onBlocked = () => {
-    setBlocking(false);
-    // The detail shows the new state and its reason, and the search does not
-    // keep listing the account as it was.
-    void queryClient.invalidateQueries({ queryKey: ['account', userId] });
-    void queryClient.invalidateQueries({ queryKey: ['accounts'] });
-  };
   const counter = (value: number | undefined) =>
     counts.isPending ? <Loader size="xs" /> : (value ?? '—');
 
@@ -160,11 +171,16 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
         </Stack>
       </Card>
 
-      <BlockAccountModal
+      <ReasonModal
         opened={blocking}
-        account={data}
-        onClose={() => setBlocking(false)}
-        onBlocked={onBlocked}
+        title={`Bloquear ${data.handle}`}
+        description="La cuenta pierde el acceso al instante y se cierran todas sus sesiones. El motivo queda guardado para el equipo; el dueño no lo ve."
+        confirmLabel="Bloquear cuenta"
+        maxLength={BLOCK_REASON_MAX_LENGTH}
+        loading={block.isPending}
+        error={block.isError ? toApiError(block.error) : null}
+        onConfirm={(reason) => block.mutate(reason)}
+        onClose={closeBlocking}
       />
     </Stack>
   );

@@ -209,7 +209,7 @@ src/
 ├── components/
 │   ├── layout/          # AppShell, navegación y header
 │   ├── form/            # TextField, PasswordField, SubmitButton
-│   ├── feedback/        # ProblemAlert: errores del backend en formato Problem Details
+│   ├── feedback/        # ProblemAlert (errores Problem Details) y ReasonModal (acciones con motivo)
 │   └── data/            # DataTable con estados cargando, vacío y error
 ├── features/            # un módulo por área del backoffice
 │   ├── auth/            # login, sesión y guardia de 401 (E5-H2)
