@@ -83,7 +83,8 @@ el backend en cada pedido. Un `401` de cualquier endpoint cierra la sesión y ma
 (`src/features/auth/sessionGuard.ts`). El rol solo decide qué se muestra: "Administradores"
 (`/users`) aparece y responde únicamente para `superadmin`, pero el backend rechaza igual a un
 moderador que llegue por la API. "Usuarios" (`/users/search` y el detalle `/users/:id`, `E5-H4`)
-es para cualquier administrador: busca cuentas de la app por email o handle.
+es para cualquier administrador: busca cuentas de la app por email o handle, y desde el detalle
+las bloquea con un motivo obligatorio (`E5-H5`).
 
 ## Correr los tests
 
@@ -208,14 +209,14 @@ src/
 ├── components/
 │   ├── layout/          # AppShell, navegación y header
 │   ├── form/            # TextField, PasswordField, SubmitButton
-│   ├── feedback/        # ProblemAlert: errores del backend en formato Problem Details
+│   ├── feedback/        # ProblemAlert (errores Problem Details) y ReasonModal (acciones con motivo)
 │   └── data/            # DataTable con estados cargando, vacío y error
 ├── features/            # un módulo por área del backoffice
 │   ├── auth/            # login, sesión y guardia de 401 (E5-H2)
 │   ├── dashboard/       # métricas globales de la plataforma
 │   ├── health/          # estado de los microservicios (E5-H11)
 │   ├── moderation/      # cola de denuncias (E5-H7)
-│   └── users/           # alta de administradores (E5-H1), búsqueda y detalle de cuentas (E5-H4)
+│   └── users/           # alta de administradores (E5-H1), búsqueda y detalle de cuentas (E5-H4), bloqueo (E5-H5)
 ├── services/apiClient.ts # cliente Axios y normalización de errores (toApiError)
 ├── stores/              # estado global con Zustand (sesión en authStore)
 ├── test/setup.ts        # polyfills de jsdom para Mantine

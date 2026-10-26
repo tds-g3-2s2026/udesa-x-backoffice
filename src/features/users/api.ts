@@ -76,6 +76,9 @@ export interface UserAccount {
   handle: string;
   display_name: string | null;
   status: AccountStatus;
+  /** Why and when `status` last changed. Only an administrator's block leaves a reason. */
+  status_reason: string | null;
+  status_changed_at: string | null;
   is_email_verified: boolean;
   created_at: string;
 }
@@ -115,4 +118,12 @@ export async function getAccount(id: string): Promise<UserAccount> {
 export async function getAccountCounts(id: string): Promise<AccountCounts> {
   const { data } = await apiClient.get<AccountCounts>(`/admin/posts/accounts/${id}/counts`);
   return data;
+}
+
+/**
+ * Blocks an app account with a reason (E5-H5). users-api ends every session it
+ * has open at once; blocking it again keeps the first reason.
+ */
+export async function blockAccount(id: string, reason: string): Promise<void> {
+  await apiClient.post(`/admin/users/${id}/block`, { reason });
 }
