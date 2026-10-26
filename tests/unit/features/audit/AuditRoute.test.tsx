@@ -1,14 +1,24 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { RouterProvider, createRouter, createMemoryHistory } from '@tanstack/react-router';
 import { routeTree } from '../../../../src/router';
 import { renderWithProviders } from '../../helpers/render';
 import { resetSession, signInAs } from '../../helpers/session';
+import { listAuditEntries } from '../../../../src/features/audit/api';
+import { getAccount, getAccountCounts } from '../../../../src/features/users/api';
 
 vi.mock('../../../../src/features/audit/api', () => ({
   listAuditEntries: vi.fn().mockResolvedValue({ items: [], total: 0 }),
 }));
-beforeEach(resetSession);
+vi.mock('../../../../src/features/users/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../src/features/users/api')>()),
+  getAccount: vi.fn(),
+  getAccountCounts: vi.fn(),
+}));
+beforeEach(() => {
+  resetSession();
+  vi.mocked(listAuditEntries).mockResolvedValue({ items: [], total: 0 });
+});
 
 it.each(['moderator', 'superadmin'] as const)(
   'allows %s to open the audit route and navigation',
@@ -22,6 +32,53 @@ it.each(['moderator', 'superadmin'] as const)(
     expect(await screen.findByRole('heading', { name: 'Auditoría' })).toBeInTheDocument();
     expect(screen.getAllByText('Auditoría')).toHaveLength(2);
     expect(router.state.location.pathname).toBe('/audit');
+  }
+);
+
+it.each(['moderator', 'superadmin'] as const)(
+  'allows %s to open the existing account detail from an audit handle',
+  async (role) => {
+    signInAs(role);
+    vi.mocked(listAuditEntries).mockResolvedValue({
+      total: 1,
+      items: [
+        {
+          id: 'audit-1',
+          occurred_at: '2026-10-25T10:00:00Z',
+          actor_id: 'admin-1',
+          actor_email: 'admin@udesa.edu.ar',
+          action: 'report.dismissed',
+          target_type: 'user',
+          target_id: 'account-1',
+          target_handle: '@mariag',
+          details: {},
+        },
+      ],
+    });
+    vi.mocked(getAccount).mockResolvedValue({
+      id: 'account-1',
+      email: 'maria@udesa.edu.ar',
+      handle: '@mariag',
+      display_name: 'María Gómez',
+      status: 'active',
+      status_reason: null,
+      status_changed_at: null,
+      is_email_verified: true,
+      created_at: '2026-10-20T10:00:00Z',
+    });
+    vi.mocked(getAccountCounts).mockResolvedValue({ followers: 2, posts: 3 });
+    const router = createRouter({
+      routeTree,
+      history: createMemoryHistory({ initialEntries: ['/audit'] }),
+    });
+    renderWithProviders(<RouterProvider router={router} />);
+
+    fireEvent.click(await screen.findByRole('link', { name: '@mariag' }));
+
+    expect(await screen.findByRole('heading', { name: 'María Gómez' })).toBeInTheDocument();
+    expect(screen.getByText('maria@udesa.edu.ar')).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.pathname).toBe('/users/account-1'));
+    expect(getAccount).toHaveBeenCalledWith('account-1');
   }
 );
 

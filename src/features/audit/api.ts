@@ -8,6 +8,7 @@ export interface AuditEntry {
   action: string;
   target_type: string;
   target_id: string;
+  target_handle: string | null;
   details: Record<string, unknown>;
 }
 

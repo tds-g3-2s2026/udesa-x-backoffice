@@ -1,8 +1,22 @@
 import { beforeEach, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { AuditPage } from '../../../../src/features/audit/pages/AuditPage';
 import { listAuditEntries, type AuditEntry } from '../../../../src/features/audit/api';
 import { renderWithProviders } from '../../helpers/render';
+import { resetSession, signInAs } from '../../helpers/session';
+
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({
+    to,
+    params,
+    children,
+  }: {
+    to: string;
+    params?: { userId: string };
+    children: ReactNode;
+  }) => <a href={params ? to.replace('$userId', params.userId) : to}>{children}</a>,
+}));
 
 vi.mock('../../../../src/features/audit/api', () => ({ listAuditEntries: vi.fn() }));
 const list = vi.mocked(listAuditEntries);
@@ -14,10 +28,12 @@ const entry: AuditEntry = {
   action: 'user.blocked',
   target_type: 'user',
   target_id: 'account-1',
+  target_handle: '@mariag',
   details: {},
 };
 beforeEach(() => {
   list.mockReset();
+  resetSession();
 });
 
 it('test_e5_h6_ca1_shows_email_action_entity_and_timestamp', async () => {
@@ -25,9 +41,33 @@ it('test_e5_h6_ca1_shows_email_action_entity_and_timestamp', async () => {
   const { container } = renderWithProviders(<AuditPage />);
   expect(await screen.findByText(entry.actor_email)).toBeInTheDocument();
   expect(screen.getByText('Bloqueó una cuenta')).toBeInTheDocument();
-  expect(screen.getByText('Cuenta: account-1')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '@mariag' })).toHaveAttribute('href', '/users/account-1');
+  expect(screen.queryByText(/account-1/)).not.toBeInTheDocument();
   expect(container.querySelector('time')).toHaveAttribute('datetime', entry.occurred_at);
 });
+
+it('keeps unavailable accounts in the history without a broken link', async () => {
+  list.mockResolvedValue({ items: [{ ...entry, target_handle: null }], total: 1 });
+  renderWithProviders(<AuditPage />);
+  expect(await screen.findByText('Cuenta no disponible')).toBeInTheDocument();
+  expect(screen.getByText(entry.actor_email)).toBeInTheDocument();
+  expect(screen.queryByRole('link')).not.toBeInTheDocument();
+});
+
+it.each(['superadmin', 'moderator'] as const)(
+  'only links administrator actions to management for an authorized %s',
+  async (role) => {
+    signInAs(role);
+    list.mockResolvedValue({ items: [{ ...entry, action: 'admin.created' }], total: 1 });
+    renderWithProviders(<AuditPage />);
+    await screen.findByText('@mariag');
+    if (role === 'superadmin') {
+      expect(screen.getByRole('link', { name: '@mariag' })).toHaveAttribute('href', '/users');
+    } else {
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    }
+  }
+);
 
 it('test_e5_h6_ca2_the_page_has_no_edit_or_delete_actions', async () => {
   list.mockResolvedValue({ items: [entry], total: 1 });

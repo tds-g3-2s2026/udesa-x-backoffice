@@ -259,3 +259,7 @@ El historial muestra el email guardado al realizar la acción y se consulta
 en páginas de 20 entradas, de la más reciente a la más antigua. Es de solo
 lectura. Las decisiones de denuncias aparecen después de su entrega por
 RabbitMQ; la pantalla no promete sincronización inmediata entre servicios.
+La entidad muestra su handle actual y enlaza a la ficha de la cuenta. Las cuentas
+no disponibles conservan su entrada sin enlace; las acciones sobre administradores
+enlazan a su gestión sólo para SuperAdmin. El email del actor conserva el valor
+guardado al realizar la acción.

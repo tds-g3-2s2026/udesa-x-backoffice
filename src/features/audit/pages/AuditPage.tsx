@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Button, Card, Group, Stack, Text, Title } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { DataTable, type DataTableColumn } from '../../../components';
 import { toApiError } from '../../../services/apiClient';
+import { useAuthStore } from '../../../stores/authStore';
 import { type AuditEntry, listAuditEntries } from '../api';
 
 const PAGE_SIZE = 20;
@@ -13,6 +15,39 @@ const ACTION_LABELS: Record<string, string> = {
   'report.dismissed': 'Descartó denuncias',
   'report.resolved': 'Resolvió denuncias',
 };
+
+function AuditTarget({ entry }: { entry: AuditEntry }) {
+  const role = useAuthStore((state) => state.user?.role);
+  if (entry.target_type !== 'user') {
+    return <Text size="sm">{entry.target_type}</Text>;
+  }
+  if (!entry.target_handle) {
+    return (
+      <Text size="sm" c="dimmed">
+        Cuenta no disponible
+      </Text>
+    );
+  }
+  if (entry.action === 'admin.created' || entry.action === 'admin.temporary_password_reset') {
+    return role === 'superadmin' ? (
+      <Link to="/users">
+        <Text component="span" size="sm" c="blue">
+          {entry.target_handle}
+        </Text>
+      </Link>
+    ) : (
+      <Text size="sm">{entry.target_handle}</Text>
+    );
+  }
+  return (
+    <Link to="/users/$userId" params={{ userId: entry.target_id }}>
+      <Text component="span" size="sm" c="blue">
+        {entry.target_handle}
+      </Text>
+    </Link>
+  );
+}
+
 const columns: DataTableColumn<AuditEntry>[] = [
   {
     key: 'date',
@@ -32,11 +67,7 @@ const columns: DataTableColumn<AuditEntry>[] = [
   {
     key: 'target',
     header: 'Entidad afectada',
-    render: (entry) => (
-      <Text size="sm" style={{ overflowWrap: 'anywhere' }}>
-        {entry.target_type === 'user' ? 'Cuenta' : entry.target_type}: {entry.target_id}
-      </Text>
-    ),
+    render: (entry) => <AuditTarget entry={entry} />,
   },
 ];
 
