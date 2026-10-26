@@ -1,0 +1,239 @@
+import React from 'react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
+import { AccountDetailPage } from '../../../../src/features/users/pages/AccountDetailPage';
+import { AccountSearchPage } from '../../../../src/features/users/pages/AccountSearchPage';
+import type {
+  AccountCounts,
+  UserAccount,
+  UserAccountPage,
+} from '../../../../src/features/users/api';
+import { apiClient } from '../../../../src/services/apiClient';
+import { renderWithProviders } from '../../helpers/render';
+
+// A plain anchor in place of the router's Link: the screens are tested without a
+// router. The routes themselves are covered in App.test.tsx.
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({
+    to,
+    params,
+    children,
+  }: {
+    to: string;
+    params?: { userId: string };
+    children: React.ReactNode;
+  }) => <a href={params ? to.replace('$userId', params.userId) : to}>{children}</a>,
+}));
+
+const config = { headers: new AxiosHeaders() } as InternalAxiosRequestConfig;
+
+const ok = <T,>(data: T) => ({ data, status: 200, statusText: 'OK', headers: {}, config });
+
+const page = (items: UserAccount[], nextCursor: string | null = null) =>
+  ok<UserAccountPage>({ items, next_cursor: nextCursor });
+
+const account = (overrides: Partial<UserAccount> = {}): UserAccount => ({
+  id: 'acc-1',
+  email: 'maria.gomez@udesa.edu.ar',
+  handle: '@mariag',
+  display_name: 'María Gómez',
+  status: 'active',
+  is_email_verified: true,
+  created_at: '2026-10-20T15:00:00Z',
+  ...overrides,
+});
+
+const problem = (status: number, code: string, detail: string) =>
+  new AxiosError(
+    'Request failed',
+    'ERR_BAD_REQUEST',
+    config,
+    {},
+    {
+      status,
+      statusText: '',
+      headers: {},
+      config,
+      data: { type: `https://udesa-x.dev/errors/${code}`, title: 'Error', status, detail },
+    }
+  );
+
+// No response at all: what a service that does not answer looks like.
+const unreachable = () => new AxiosError('Network Error', 'ERR_NETWORK', config);
+
+const get = vi.spyOn(apiClient, 'get');
+
+beforeEach(() => {
+  get.mockReset();
+});
+
+describe('AccountSearchPage', () => {
+  it('E5-H4.CA2 - sends the partial text and lists the matching accounts', async () => {
+    get.mockResolvedValueOnce(
+      page([
+        account(),
+        account({
+          id: 'acc-2',
+          email: 'otra@gmail.com',
+          handle: '@gomezito',
+          display_name: null,
+          status: 'suspended',
+        }),
+      ])
+    );
+
+    renderWithProviders(<AccountSearchPage query="gomez" onSearch={vi.fn()} />);
+
+    expect(await screen.findByText('@mariag')).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith('/admin/users/search', { params: { q: 'gomez' } });
+    expect(screen.getByText('María Gómez')).toBeInTheDocument();
+    // `suspended` is what an administrator's block leaves: it reads "Bloqueada".
+    expect(screen.getByText('Bloqueada')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '@gomezito' })).toHaveAttribute('href', '/users/acc-2');
+  });
+
+  it('E5-H4.CA3 - the next page sends the cursor, and the previous one goes back to the first page', async () => {
+    get
+      .mockResolvedValueOnce(page([account()], 'cursor-1'))
+      .mockResolvedValueOnce(page([account({ id: 'acc-2', handle: '@segunda' })]))
+      .mockResolvedValueOnce(page([account()], 'cursor-1'));
+
+    renderWithProviders(<AccountSearchPage query="gomez" onSearch={vi.fn()} />);
+    await screen.findByText('@mariag');
+    fireEvent.click(screen.getByRole('button', { name: /Siguiente/ }));
+
+    expect(await screen.findByText('@segunda')).toBeInTheDocument();
+    expect(get).toHaveBeenLastCalledWith('/admin/users/search', {
+      params: { q: 'gomez', cursor: 'cursor-1' },
+    });
+    expect(screen.getByText('Página 2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Siguiente/ })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: /Anterior/ }));
+
+    // The cached page shows at once, and it is asked again in the background in
+    // case an account changed status meanwhile.
+    expect(await screen.findByText('@mariag')).toBeInTheDocument();
+    expect(screen.getByText('Página 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Anterior/ })).toBeDisabled();
+    await waitFor(() =>
+      expect(get).toHaveBeenLastCalledWith('/admin/users/search', { params: { q: 'gomez' } })
+    );
+  });
+
+  it('asks for three characters without calling the backend', () => {
+    renderWithProviders(<AccountSearchPage query="ab" onSearch={vi.fn()} />);
+
+    expect(screen.getByText('La búsqueda necesita al menos 3 caracteres.')).toBeInTheDocument();
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('invites to search while there is no text yet', () => {
+    renderWithProviders(<AccountSearchPage query="" onSearch={vi.fn()} />);
+
+    expect(screen.getByText(/Escribí parte del email o del handle/)).toBeInTheDocument();
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  it('hands the trimmed text to the route when the form is submitted', () => {
+    const onSearch = vi.fn();
+    renderWithProviders(<AccountSearchPage query="" onSearch={onSearch} />);
+
+    fireEvent.change(screen.getByLabelText('Email o handle'), { target: { value: '  gomez  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+
+    expect(onSearch).toHaveBeenCalledWith('gomez');
+  });
+
+  it('shows the problem when the search fails', async () => {
+    get.mockRejectedValueOnce(
+      problem(400, 'invalid-cursor', 'El cursor no tiene un formato reconocible')
+    );
+
+    renderWithProviders(<AccountSearchPage query="gomez" onSearch={vi.fn()} />);
+
+    expect(
+      await screen.findByText('El cursor no tiene un formato reconocible')
+    ).toBeInTheDocument();
+  });
+
+  it('says when nothing matches', async () => {
+    get.mockResolvedValueOnce(page([]));
+
+    renderWithProviders(<AccountSearchPage query="zzz" onSearch={vi.fn()} />);
+
+    expect(await screen.findByText('Ninguna cuenta coincide con "zzz"')).toBeInTheDocument();
+  });
+});
+
+describe('AccountDetailPage', () => {
+  /** Answers each of the two requests the screen makes, by path. */
+  const answer = (detail: () => Promise<unknown>, counts: () => Promise<unknown>) =>
+    get.mockImplementation(((url: string) =>
+      url.startsWith('/admin/posts/') ? counts() : detail()) as never);
+
+  it('E5-H4.CA1 - shows status, registration date, followers and posts', async () => {
+    answer(
+      async () => ok(account({ status: 'under_review' })),
+      async () => ok<AccountCounts>({ followers: 12, posts: 34 })
+    );
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('María Gómez')).toBeInTheDocument();
+    expect(screen.getByText('@mariag')).toBeInTheDocument();
+    expect(screen.getByText('En revisión')).toBeInTheDocument();
+    expect(screen.getByText('Se registró el 20/10/2026')).toBeInTheDocument();
+    expect(await screen.findByText('12')).toBeInTheDocument();
+    expect(screen.getByText('34')).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith('/admin/users/acc-1');
+    expect(get).toHaveBeenCalledWith('/admin/posts/accounts/acc-1/counts');
+  });
+
+  it('keeps the account visible when posts-api does not answer', async () => {
+    answer(
+      async () => ok(account()),
+      async () => {
+        throw unreachable();
+      }
+    );
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('No se pudo conectar')).toBeInTheDocument();
+    expect(screen.getByText('María Gómez')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+  });
+
+  it('shows the problem of the backend when the account does not exist', async () => {
+    answer(
+      async () => {
+        throw problem(404, 'account-not-found', 'La cuenta no existe');
+      },
+      async () => ok<AccountCounts>({ followers: 0, posts: 0 })
+    );
+
+    renderWithProviders(<AccountDetailPage userId="acc-9" />);
+
+    expect(await screen.findByText('La cuenta no existe')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Volver a la búsqueda/ })).toHaveAttribute(
+      'href',
+      '/users/search'
+    );
+  });
+
+  it('marks an account that did not verify its email', async () => {
+    answer(
+      async () => ok(account({ is_email_verified: false, display_name: null })),
+      async () => ok<AccountCounts>({ followers: 0, posts: 0 })
+    );
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('Email sin verificar')).toBeInTheDocument();
+    // Without a display name, the handle is the title.
+    expect(screen.getByRole('heading', { name: '@mariag' })).toBeInTheDocument();
+    expect(screen.getByText('Activa')).toBeInTheDocument();
+  });
+});

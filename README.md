@@ -80,9 +80,10 @@ Con el `users-api` levantado por su `docker-compose.dev.yml` ya existe un supera
 La sesión es el access token del backend, guardado en `localStorage` y decodificado en el cliente
 para leer el rol y el vencimiento (`src/stores/authStore.ts`). No se verifica la firma: eso lo hace
 el backend en cada pedido. Un `401` de cualquier endpoint cierra la sesión y manda al login
-(`src/features/auth/sessionGuard.ts`). El rol solo decide qué se muestra: "User Management"
+(`src/features/auth/sessionGuard.ts`). El rol solo decide qué se muestra: "Administradores"
 (`/users`) aparece y responde únicamente para `superadmin`, pero el backend rechaza igual a un
-moderador que llegue por la API.
+moderador que llegue por la API. "Usuarios" (`/users/search` y el detalle `/users/:id`, `E5-H4`)
+es para cualquier administrador: busca cuentas de la app por email o handle.
 
 ## Correr los tests
 
@@ -214,7 +215,7 @@ src/
 │   ├── dashboard/       # métricas globales de la plataforma
 │   ├── health/          # estado de los microservicios (E5-H11)
 │   ├── moderation/      # cola de denuncias (E5-H7)
-│   └── users/           # alta de administradores y sus credenciales (E5-H1)
+│   └── users/           # alta de administradores (E5-H1), búsqueda y detalle de cuentas (E5-H4)
 ├── services/apiClient.ts # cliente Axios y normalización de errores (toApiError)
 ├── stores/              # estado global con Zustand (sesión en authStore)
 ├── test/setup.ts        # polyfills de jsdom para Mantine
