@@ -103,6 +103,7 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
   }
 
   const { data } = account;
+  const displayName = data.display_name?.trim() || data.handle;
   const status = ACCOUNT_STATUS[data.status];
   const blocked = data.status === 'suspended';
   const counter = (value: number | undefined) =>
@@ -116,9 +117,12 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
         <Stack gap="md">
           <Group justify="space-between" align="flex-start">
             <div>
-              <Title order={2}>{data.display_name ?? data.handle}</Title>
-              <Text c="dimmed">{data.handle}</Text>
+              <Title order={2}>{displayName}</Title>
+              {displayName !== data.handle ? <Text c="dimmed">{data.handle}</Text> : null}
               <Text size="sm">{data.email}</Text>
+              <Text size="xs" c="dimmed" style={{ overflowWrap: 'anywhere' }}>
+                ID: {data.id}
+              </Text>
             </div>
             <Group gap="xs">
               <Badge color={status.color} variant="light" size="lg">

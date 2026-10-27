@@ -187,6 +187,7 @@ describe('AccountDetailPage', () => {
 
     expect(await screen.findByText('María Gómez')).toBeInTheDocument();
     expect(screen.getByText('@mariag')).toBeInTheDocument();
+    expect(screen.getByText('ID: acc-1')).toBeInTheDocument();
     expect(screen.getByText('En revisión')).toBeInTheDocument();
     expect(screen.getByText('Se registró el 20/10/2026')).toBeInTheDocument();
     expect(await screen.findByText('12')).toBeInTheDocument();
@@ -238,6 +239,8 @@ describe('AccountDetailPage', () => {
     expect(await screen.findByText('Email sin verificar')).toBeInTheDocument();
     // Without a display name, the handle is the title.
     expect(screen.getByRole('heading', { name: '@mariag' })).toBeInTheDocument();
+    expect(screen.getAllByText('@mariag')).toHaveLength(1);
+    expect(screen.getByText('ID: acc-1')).toBeInTheDocument();
     expect(screen.getByText('Activa')).toBeInTheDocument();
   });
 

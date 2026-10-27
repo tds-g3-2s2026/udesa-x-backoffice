@@ -251,3 +251,15 @@ Para mantener la calidad y consistencia del código, todos los miembros deben se
 - **Commits (Opcional):** Recomendamos usar la convención de [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
 La versión completa y vigente de estas reglas vive en [`CONVENCIONES.md`](https://github.com/tds-g3-2s2026/udesa-x-platform/blob/main/docs/CONVENCIONES.md) de `udesa-x-platform`; ante cualquier diferencia, manda ese archivo. El punto de entrada para trabajar en este repo, con o sin agente, es su `AGENTS.md`.
+
+## Auditoría
+
+SuperAdmin y Moderador pueden abrir Auditoría desde el menú o en `/audit`.
+El historial muestra el email guardado al realizar la acción y se consulta
+en páginas de 20 entradas, de la más reciente a la más antigua. Es de solo
+lectura. Las decisiones de denuncias aparecen después de su entrega por
+RabbitMQ; la pantalla no promete sincronización inmediata entre servicios.
+La entidad muestra su handle actual y enlaza a la ficha de la cuenta. Las cuentas
+no disponibles conservan su entrada sin enlace; las acciones sobre administradores
+enlazan a su gestión sólo para SuperAdmin. El email del actor conserva el valor
+guardado al realizar la acción.

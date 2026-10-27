@@ -253,6 +253,14 @@ export const AppLayout: React.FC = () => {
             active={location.pathname.startsWith('/users/')}
             onClick={() => navigate({ to: '/users/search', search: {} })}
           />
+          {(user.role === 'superadmin' || user.role === 'moderator') && (
+            <NavLink
+              label="Auditoría"
+              leftSection={<IconShield size={20} stroke={1.5} />}
+              active={location.pathname === '/audit'}
+              onClick={() => navigate({ to: '/audit' })}
+            />
+          )}
           {canManageUsers && (
             <NavLink
               label="Administradores"
