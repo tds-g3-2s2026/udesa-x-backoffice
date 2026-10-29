@@ -40,7 +40,7 @@ docker compose -f docker/docker-compose.dev.yml up --build
 
 ## Reglas del equipo
 
-- **Ramas e issues**: Rama base `main`. Ramas de trabajo `feature-<nombre>` o `fix-<nombre>`, siempre asociadas a un issue en el mismo repositorio.
+- **Ramas e issues**: Rama base `main`. Ramas de trabajo `feature-<nombre>` (funcionalidad), `fix-<nombre>` (defecto) o `chore-<nombre>` (mantenimiento y tooling, etiqueta `tech debt`), siempre asociadas a un issue en el mismo repositorio.
 - **Idiomas**:
   - Código (`src/`, `tests/`), nombres de archivos, identificadores y comentarios en código: **inglés**.
   - Documentación (`docs/`, `README.md`), mensajes de commit y Pull Requests: **español**.
@@ -60,7 +60,7 @@ docker compose -f docker/docker-compose.dev.yml up --build
 
 ## Skills (.agents/skills/)
 
-- `explicar-implementacion`: Genera la explicación detallada del cambio para incluir en la descripción del PR.
+- `explicar-implementacion`: Redacta la descripción del PR, una explicación breve en texto corrido para alguien sin el contexto de la pieza.
 - `revisar-pr`: Guía paso a paso para la revisión técnica de Pull Requests.
 
 <!-- FIN BLOQUE COMUN -->
