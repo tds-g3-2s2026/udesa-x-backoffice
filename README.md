@@ -83,8 +83,9 @@ el backend en cada pedido. Un `401` de cualquier endpoint cierra la sesión y ma
 (`src/features/auth/sessionGuard.ts`). El rol solo decide qué se muestra: "Administradores"
 (`/users`) aparece y responde únicamente para `superadmin`, pero el backend rechaza igual a un
 moderador que llegue por la API. "Usuarios" (`/users/search` y el detalle `/users/:id`, `E5-H4`)
-es para cualquier administrador: busca cuentas de la app por email o handle, y desde el detalle
-las bloquea con un motivo obligatorio (`E5-H5`).
+es para cualquier administrador: busca cuentas de la app por email o handle, muestra la fecha y
+hora de su último inicio de sesión, o "Nunca" (`E5-H9`), y desde el detalle las bloquea con un
+motivo obligatorio (`E5-H5`).
 
 ## Correr los tests
 
