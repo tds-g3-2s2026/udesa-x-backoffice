@@ -17,7 +17,13 @@ import { Link } from '@tanstack/react-router';
 import { IconArrowLeft, IconBan } from '@tabler/icons-react';
 import { ProblemAlert, ReasonModal } from '../../../components';
 import { toApiError } from '../../../services/apiClient';
-import { ACCOUNT_STATUS, blockAccount, getAccount, getAccountCounts } from '../api';
+import {
+  ACCOUNT_STATUS,
+  blockAccount,
+  formatLastLogin,
+  getAccount,
+  getAccountCounts,
+} from '../api';
 
 /** Same limit users-api applies to the reason of a block. */
 const BLOCK_REASON_MAX_LENGTH = 500;
@@ -136,7 +142,10 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
             </Group>
           </Group>
 
-          <Text size="sm">Se registró el {formatDate(data.created_at)}</Text>
+          <div>
+            <Text size="sm">Se registró el {formatDate(data.created_at)}</Text>
+            <Text size="sm">Última conexión: {formatLastLogin(data.last_login_at)}</Text>
+          </div>
 
           {/* An account blocked before reasons were stored has none to show. */}
           {blocked && data.status_reason ? (

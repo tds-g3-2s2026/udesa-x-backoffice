@@ -5,7 +5,7 @@ import { Link } from '@tanstack/react-router';
 import { IconChevronLeft, IconChevronRight, IconSearch } from '@tabler/icons-react';
 import { DataTable, type DataTableColumn, SubmitButton, TextField } from '../../../components';
 import { toApiError } from '../../../services/apiClient';
-import { ACCOUNT_STATUS, searchAccounts, type UserAccount } from '../api';
+import { ACCOUNT_STATUS, formatLastLogin, searchAccounts, type UserAccount } from '../api';
 
 // The backend refuses shorter text with a 422: checked here too so the screen
 // can say so without a round trip.
@@ -50,6 +50,11 @@ const columns: DataTableColumn<UserAccount>[] = [
     key: 'registered',
     header: 'Registro',
     render: (account) => <Text size="sm">{formatDate(account.created_at)}</Text>,
+  },
+  {
+    key: 'last-login',
+    header: 'Última conexión',
+    render: (account) => <Text size="sm">{formatLastLogin(account.last_login_at)}</Text>,
   },
 ];
 
