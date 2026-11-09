@@ -43,8 +43,12 @@ const account = (overrides: Partial<UserAccount> = {}): UserAccount => ({
   status_changed_at: null,
   is_email_verified: true,
   created_at: '2026-10-20T15:00:00Z',
+  last_login_at: null,
   ...overrides,
 });
+
+// Midday UTC: the date is the same in any time zone the tests run in, the hour is not.
+const lastLogin = (date: string) => new RegExp(`^${date}, [0-9]{2}:[0-9]{2}$`);
 
 const problem = (status: number, code: string, detail: string) =>
   new AxiosError(
@@ -162,6 +166,31 @@ describe('AccountSearchPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('E5-H9.CA2 - shows the last connection of every account', async () => {
+    get.mockResolvedValueOnce(
+      page([
+        account({ last_login_at: '2026-11-07T12:30:00Z' }),
+        account({ id: 'acc-2', handle: '@segunda', last_login_at: '2026-11-01T12:00:00Z' }),
+      ])
+    );
+
+    renderWithProviders(<AccountSearchPage query="gomez" onSearch={vi.fn()} />);
+
+    expect(await screen.findByText('@mariag')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Última conexión' })).toBeInTheDocument();
+    expect(screen.getByText(lastLogin('07/11/2026'))).toBeInTheDocument();
+    expect(screen.getByText(lastLogin('01/11/2026'))).toBeInTheDocument();
+  });
+
+  it('E5-H9.CA2 - says when an account never logged in', async () => {
+    get.mockResolvedValueOnce(page([account({ last_login_at: null })]));
+
+    renderWithProviders(<AccountSearchPage query="gomez" onSearch={vi.fn()} />);
+
+    expect(await screen.findByText('@mariag')).toBeInTheDocument();
+    expect(screen.getByText('Nunca')).toBeInTheDocument();
+  });
+
   it('says when nothing matches', async () => {
     get.mockResolvedValueOnce(page([]));
 
@@ -194,6 +223,19 @@ describe('AccountDetailPage', () => {
     expect(screen.getByText('34')).toBeInTheDocument();
     expect(get).toHaveBeenCalledWith('/admin/users/acc-1');
     expect(get).toHaveBeenCalledWith('/admin/posts/accounts/acc-1/counts');
+  });
+
+  it('E5-H9.CA2 - the detail shows the last connection too', async () => {
+    answer(
+      async () => ok(account({ last_login_at: '2026-11-07T12:30:00Z' })),
+      async () => ok<AccountCounts>({ followers: 0, posts: 0 })
+    );
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(
+      await screen.findByText(/^Última conexión: 07\/11\/2026, [0-9]{2}:[0-9]{2}$/)
+    ).toBeInTheDocument();
   });
 
   it('keeps the account visible when posts-api does not answer', async () => {
