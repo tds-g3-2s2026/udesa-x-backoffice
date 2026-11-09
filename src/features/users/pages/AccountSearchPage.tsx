@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import { Badge, Button, Card, Group, Stack, Text, Title } from '@mantine/core';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { IconChevronLeft, IconChevronRight, IconSearch } from '@tabler/icons-react';
-import { DataTable, type DataTableColumn, SubmitButton, TextField } from '../../../components';
+import { IconChevronLeft, IconChevronRight, IconDownload, IconSearch } from '@tabler/icons-react';
+import {
+  DataTable,
+  type DataTableColumn,
+  ProblemAlert,
+  SubmitButton,
+  TextField,
+} from '../../../components';
+import { useAuthStore } from '../../../stores/authStore';
+import { downloadAccounts } from '../accountsExport';
 import { toApiError } from '../../../services/apiClient';
 import { ACCOUNT_STATUS, formatLastLogin, searchAccounts, type UserAccount } from '../api';
 
@@ -74,6 +82,8 @@ export const AccountSearchPage: React.FC<AccountSearchPageProps> = ({ query, onS
   // One cursor per page already visited: "Anterior" reuses the one that led to
   // it instead of asking the backend to page backwards.
   const [cursors, setCursors] = useState<(string | null)[]>([null]);
+  // Only shown to a superadmin: users-api refuses the export to a moderator anyway.
+  const canExport = useAuthStore((state) => state.user?.role === 'superadmin');
 
   const text = query.trim();
   const searchable = text.length >= MIN_QUERY_LENGTH;
@@ -86,6 +96,8 @@ export const AccountSearchPage: React.FC<AccountSearchPageProps> = ({ query, onS
   });
 
   const nextCursor = results.data?.next_cursor ?? null;
+
+  const download = useMutation({ mutationFn: () => downloadAccounts(text) });
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -108,6 +120,20 @@ export const AccountSearchPage: React.FC<AccountSearchPageProps> = ({ query, onS
   } else {
     content = (
       <Stack gap="sm">
+        {canExport ? (
+          <Group justify="flex-end">
+            <Button
+              variant="light"
+              size="xs"
+              leftSection={<IconDownload size={14} />}
+              loading={download.isPending}
+              onClick={() => download.mutate()}
+            >
+              Exportar CSV
+            </Button>
+          </Group>
+        ) : null}
+        <ProblemAlert error={download.isError ? toApiError(download.error) : null} />
         <DataTable
           columns={columns}
           rows={results.data?.items ?? []}
