@@ -81,7 +81,24 @@ export interface UserAccount {
   status_changed_at: string | null;
   is_email_verified: boolean;
   created_at: string;
+  /** The last successful login (E5-H9), `null` if the account never logged in since it is recorded. */
+  last_login_at: string | null;
 }
+
+/**
+ * Date and time of the last login, or "Nunca". 24 hour time, as in the audit log.
+ */
+export const formatLastLogin = (iso: string | null): string =>
+  iso
+    ? new Date(iso).toLocaleString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+    : 'Nunca';
 
 /** Twenty accounts and the cursor for the next page, `null` once there is none. */
 export interface UserAccountPage {

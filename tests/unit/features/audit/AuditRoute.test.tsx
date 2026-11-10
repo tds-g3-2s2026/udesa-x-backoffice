@@ -69,6 +69,7 @@ it.each(['moderator', 'superadmin'] as const)(
       status_changed_at: null,
       is_email_verified: true,
       created_at: '2026-10-20T10:00:00Z',
+      last_login_at: null,
     });
     vi.mocked(getAccountCounts).mockResolvedValue({ followers: 2, posts: 3 });
     const router = createRouter({
