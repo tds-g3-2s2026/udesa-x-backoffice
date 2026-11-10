@@ -11,6 +11,7 @@ import type {
 } from '../../../../src/features/users/api';
 import { apiClient } from '../../../../src/services/apiClient';
 import { renderWithProviders } from '../../helpers/render';
+import { resetSession, signInAs } from '../../helpers/session';
 
 // A plain anchor in place of the router's Link: the screens are tested without a
 // router. The routes themselves are covered in App.test.tsx.
@@ -74,6 +75,7 @@ const post = vi.spyOn(apiClient, 'post');
 beforeEach(() => {
   get.mockReset();
   post.mockReset();
+  resetSession();
 });
 
 describe('AccountSearchPage', () => {
@@ -197,6 +199,60 @@ describe('AccountSearchPage', () => {
     renderWithProviders(<AccountSearchPage query="zzz" onSearch={vi.fn()} />);
 
     expect(await screen.findByText('Ninguna cuenta coincide con "zzz"')).toBeInTheDocument();
+  });
+
+  it('E5-H8.CA2 - shows the export button only to a superadmin', async () => {
+    get.mockResolvedValue(page([account()]));
+
+    signInAs('moderator');
+    const moderator = renderWithProviders(<AccountSearchPage query="gomez" onSearch={vi.fn()} />);
+    expect(await screen.findByText('@mariag')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Exportar CSV/ })).not.toBeInTheDocument();
+    moderator.unmount();
+
+    signInAs('superadmin');
+    renderWithProviders(<AccountSearchPage query="gomez" onSearch={vi.fn()} />);
+    expect(await screen.findByRole('button', { name: /Exportar CSV/ })).toBeInTheDocument();
+  });
+
+  it('E5-H8.CA1 - downloads the accounts of the search as a CSV', async () => {
+    signInAs('superadmin');
+    const file = new Blob(['ID,Handle'], { type: 'text/csv' });
+    get.mockImplementation(((url: string) =>
+      Promise.resolve(url.endsWith('export.csv') ? ok(file) : page([account()]))) as never);
+    // jsdom has no object URLs and does not navigate: both are stubbed.
+    const createObjectURL = vi.fn(() => 'blob:cuentas');
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    renderWithProviders(<AccountSearchPage query="gomez" onSearch={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Exportar CSV/ }));
+
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
+    expect(get).toHaveBeenCalledWith('/admin/users/export.csv', {
+      params: { q: 'gomez' },
+      responseType: 'blob',
+    });
+    expect(createObjectURL).toHaveBeenCalledWith(file);
+    const link = click.mock.contexts[0] as HTMLAnchorElement;
+    expect(link.download).toBe('cuentas.csv');
+    expect(link.href).toBe('blob:cuentas');
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:cuentas');
+    click.mockRestore();
+  });
+
+  it('shows the problem when the export fails', async () => {
+    signInAs('superadmin');
+    get.mockImplementation(((url: string) =>
+      url.endsWith('export.csv')
+        ? Promise.reject(unreachable())
+        : Promise.resolve(page([account()]))) as never);
+
+    renderWithProviders(<AccountSearchPage query="gomez" onSearch={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: /Exportar CSV/ }));
+
+    expect(await screen.findByText('No se pudo conectar')).toBeInTheDocument();
   });
 });
 
