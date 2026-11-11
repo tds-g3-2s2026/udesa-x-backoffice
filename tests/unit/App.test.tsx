@@ -50,6 +50,19 @@ describe('Backoffice App Shell', () => {
     ).toBeInTheDocument();
   });
 
+  it('E5-H12 - takes a moderator to the feedback inbox from the menu', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: { items: [], next_cursor: null },
+    } as never);
+    signInAs('moderator');
+    const router = renderAt('/');
+
+    fireEvent.click(await screen.findByText('Comentarios'));
+
+    expect(await screen.findByRole('heading', { name: 'Comentarios' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/feedback');
+  });
+
   it('shows the administrators screen to a superadmin only', async () => {
     signInAs('superadmin');
     renderAt('/users');

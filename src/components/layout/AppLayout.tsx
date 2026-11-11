@@ -21,6 +21,7 @@ import {
   IconDashboard,
   IconHeartbeat,
   IconShieldExclamation,
+  IconMessageDots,
   IconUsers,
   IconLogout,
   IconSearch,
@@ -245,6 +246,12 @@ export const AppLayout: React.FC = () => {
             leftSection={<IconShieldExclamation size={20} stroke={1.5} />}
             active={location.pathname === '/moderation'}
             onClick={() => navigate({ to: '/moderation' })}
+          />
+          <NavLink
+            label="Comentarios"
+            leftSection={<IconMessageDots size={20} stroke={1.5} />}
+            active={location.pathname === '/feedback'}
+            onClick={() => navigate({ to: '/feedback' })}
           />
           {/* Any administrator: searching accounts is not managing administrators. */}
           <NavLink
