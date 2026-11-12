@@ -215,6 +215,7 @@ src/
 ├── features/            # un módulo por área del backoffice
 │   ├── auth/            # login, sesión y guardia de 401 (E5-H2)
 │   ├── dashboard/       # métricas globales de la plataforma
+│   ├── feedback/        # comentarios y reportes de error enviados desde la app (E5-H12)
 │   ├── health/          # estado de los microservicios (E5-H11)
 │   ├── moderation/      # cola de denuncias (E5-H7)
 │   └── users/           # alta de administradores (E5-H1), búsqueda y detalle de cuentas (E5-H4), bloqueo (E5-H5), exportación (E5-H8)

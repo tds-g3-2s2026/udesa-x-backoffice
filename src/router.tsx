@@ -4,6 +4,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { ChangePasswordPage } from './features/auth/pages/ChangePasswordPage';
 import { LoginPage } from './features/auth/pages/LoginPage';
 import { DashboardPage } from './features/dashboard/pages/DashboardPage';
+import { FeedbackPage } from './features/feedback/pages/FeedbackPage';
 import { HealthPage } from './features/health/pages/HealthPage';
 import { ModerationPage } from './features/moderation/pages/ModerationPage';
 import { AccountDetailPage } from './features/users/pages/AccountDetailPage';
@@ -84,6 +85,12 @@ const moderationRoute = createRoute({
   component: ModerationPage,
 });
 
+const feedbackRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/feedback',
+  component: FeedbackPage,
+});
+
 const usersRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/users',
@@ -150,6 +157,7 @@ export const routeTree = rootRoute.addChildren([
     dashboardRoute,
     healthRoute,
     moderationRoute,
+    feedbackRoute,
     usersRoute,
     accountSearchRoute,
     accountDetailRoute,
