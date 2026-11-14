@@ -50,6 +50,29 @@ describe('Backoffice App Shell', () => {
     ).toBeInTheDocument();
   });
 
+  it('E5-H10 - opens the detail of a post by its address', async () => {
+    const get = vi.spyOn(apiClient, 'get').mockResolvedValue({
+      data: {
+        id: 'post-1',
+        authorId: 'acc-1',
+        authorHandle: '@mariag',
+        authorDeleted: false,
+        content: 'Compren seguidores',
+        createdAt: '2026-11-10T15:00:00Z',
+        likesCount: 0,
+        retweetsCount: 0,
+        repliesCount: 0,
+        parentId: null,
+        images: [],
+      },
+    } as never);
+    signInAs('moderator');
+    renderAt('/posts/post-1');
+
+    expect(await screen.findByText('Compren seguidores')).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith('/admin/posts/post-1');
+  });
+
   it('E5-H12 - takes a moderator to the feedback inbox from the menu', async () => {
     vi.spyOn(apiClient, 'get').mockResolvedValue({
       data: { items: [], next_cursor: null },

@@ -55,3 +55,47 @@ export async function resolveCase(userId: string): Promise<void> {
 export async function suspendAccount(userId: string, reason: string): Promise<void> {
   await apiClient.post(`/admin/users/${userId}/block`, { reason });
 }
+
+/** The text posts-api writes over a cleaned post (E5-H10). */
+export const REMOVED_BY_MODERATION = '[Contenido eliminado por moderación]';
+
+export interface PostImage {
+  id: string;
+  /** Signed and temporary: it reads the file straight from the storage. */
+  url: string;
+  position: number;
+}
+
+/**
+ * A post as `GET /admin/posts/{id}` answers it: the same shape the app reads,
+ * without the visibility rules. Only the fields this panel shows.
+ */
+export interface AdminPost {
+  id: string;
+  authorId: string;
+  /** `null` once the account was closed; `authorDeleted` says so. */
+  authorHandle: string | null;
+  authorDeleted: boolean;
+  content: string;
+  createdAt: string;
+  likesCount: number;
+  retweetsCount: number;
+  repliesCount: number;
+  /** The post this one answers, `null` if it answers nothing. */
+  parentId: string | null;
+  images: PostImage[];
+}
+
+/** One post with its author and images, whoever wrote it. A deleted one answers 404. */
+export async function getPost(postId: string): Promise<AdminPost> {
+  const { data } = await apiClient.get<AdminPost>(`/admin/posts/${postId}`);
+  return data;
+}
+
+/**
+ * The text becomes `REMOVED_BY_MODERATION` and the images go (E5-H10 CA.2).
+ * Asking again on a cleaned post changes nothing and records nothing new.
+ */
+export async function cleanPostContent(postId: string): Promise<void> {
+  await apiClient.post(`/admin/posts/${postId}/clean-content`);
+}
