@@ -7,6 +7,7 @@ import { DashboardPage } from './features/dashboard/pages/DashboardPage';
 import { FeedbackPage } from './features/feedback/pages/FeedbackPage';
 import { HealthPage } from './features/health/pages/HealthPage';
 import { ModerationPage } from './features/moderation/pages/ModerationPage';
+import { PostDetailPage } from './features/moderation/pages/PostDetailPage';
 import { AccountDetailPage } from './features/users/pages/AccountDetailPage';
 import { AccountSearchPage } from './features/users/pages/AccountSearchPage';
 import { UsersPage } from './features/users/pages/UsersPage';
@@ -138,6 +139,16 @@ const accountDetailRoute = createRoute({
   },
 });
 
+/** One post, to clear its content (E5-H10). Open to any administrator, like the inbox. */
+const postDetailRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/posts/$postId',
+  component: function PostDetailRoute() {
+    const { postId } = postDetailRoute.useParams();
+    return <PostDetailPage postId={postId} />;
+  },
+});
+
 const auditRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/audit',
@@ -161,6 +172,7 @@ export const routeTree = rootRoute.addChildren([
     usersRoute,
     accountSearchRoute,
     accountDetailRoute,
+    postDetailRoute,
     auditRoute,
   ]),
 ]);
