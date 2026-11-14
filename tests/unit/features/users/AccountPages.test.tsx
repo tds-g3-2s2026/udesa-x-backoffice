@@ -523,22 +523,55 @@ describe('AccountDetailPage', () => {
     expect(get).toHaveBeenCalledWith('/admin/posts/accounts/acc-1/posts', { params: {} });
   });
 
-  it('pages the posts with the cursor posts-api hands out', async () => {
-    answer(
-      async () => ok(account()),
-      noCounts,
-      async () => ok<AccountPostPage>({ items: [accountPost()], nextCursor: 'next-page' })
-    );
+  it('pages the posts with the cursor posts-api hands out, and goes back', async () => {
+    get.mockImplementation(((url: string, options?: { params?: { cursor?: string } }) => {
+      if (!url.endsWith('/posts')) {
+        return url.startsWith('/admin/posts/') ? noCounts() : Promise.resolve(ok(account()));
+      }
+      return Promise.resolve(
+        ok<AccountPostPage>(
+          options?.params?.cursor === 'next-page'
+            ? { items: [accountPost({ id: 'post-2', content: 'Uno más viejo' })], nextCursor: null }
+            : { items: [accountPost()], nextCursor: 'next-page' }
+        )
+      );
+    }) as never);
     renderWithProviders(<AccountDetailPage userId="acc-1" />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Siguiente' }));
 
-    await waitFor(() =>
-      expect(get).toHaveBeenCalledWith('/admin/posts/accounts/acc-1/posts', {
-        params: { cursor: 'next-page' },
-      })
+    expect(await screen.findByText('Uno más viejo')).toBeInTheDocument();
+    expect(get).toHaveBeenCalledWith('/admin/posts/accounts/acc-1/posts', {
+      params: { cursor: 'next-page' },
+    });
+    expect(screen.getByRole('button', { name: 'Siguiente' })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Anterior' }));
+
+    expect(await screen.findByText('Compren seguidores en mi perfil')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Anterior' })).toBeDisabled();
+  });
+
+  it('marks the images of each post and shows a cleaned one as such', async () => {
+    answer(
+      async () => ok(account()),
+      noCounts,
+      async () =>
+        ok<AccountPostPage>({
+          items: [
+            accountPost({ images: [{ id: 'img-1' }] }),
+            accountPost({ id: 'post-2', images: [{ id: 'img-2' }, { id: 'img-3' }] }),
+            accountPost({ id: 'post-3', content: REMOVED_BY_MODERATION }),
+          ],
+          nextCursor: null,
+        })
     );
-    expect(await screen.findByRole('button', { name: 'Anterior' })).toBeEnabled();
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('1 imagen')).toBeInTheDocument();
+    expect(screen.getByText('2 imágenes')).toBeInTheDocument();
+    expect(screen.getByText(REMOVED_BY_MODERATION)).toBeInTheDocument();
   });
 
   it('says when the account has no posts', async () => {
@@ -547,5 +580,20 @@ describe('AccountDetailPage', () => {
     renderWithProviders(<AccountDetailPage userId="acc-1" />);
 
     expect(await screen.findByText('Esta cuenta no tiene publicaciones.')).toBeInTheDocument();
+  });
+
+  it('keeps the account visible when its posts cannot be read', async () => {
+    answer(
+      async () => ok(account()),
+      noCounts,
+      async () => {
+        throw problem(503, 'service-unavailable', 'No se pudieron leer las publicaciones');
+      }
+    );
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('No se pudieron leer las publicaciones')).toBeInTheDocument();
+    expect(screen.getByText('María Gómez')).toBeInTheDocument();
   });
 });
