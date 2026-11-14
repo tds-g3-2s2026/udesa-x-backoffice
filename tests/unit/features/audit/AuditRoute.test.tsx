@@ -5,12 +5,13 @@ import { routeTree } from '../../../../src/router';
 import { renderWithProviders } from '../../helpers/render';
 import { resetSession, signInAs } from '../../helpers/session';
 import { apiClient } from '../../../../src/services/apiClient';
-import { getAccount, getAccountCounts } from '../../../../src/features/users/api';
+import { getAccount, getAccountCounts, listAccountPosts } from '../../../../src/features/users/api';
 
 vi.mock('../../../../src/features/users/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../../src/features/users/api')>()),
   getAccount: vi.fn(),
   getAccountCounts: vi.fn(),
+  listAccountPosts: vi.fn(),
 }));
 const get = vi.spyOn(apiClient, 'get');
 
@@ -64,6 +65,7 @@ it.each(['moderator', 'superadmin'] as const)(
       email: 'maria@udesa.edu.ar',
       handle: '@mariag',
       display_name: 'María Gómez',
+      bio: null,
       status: 'active',
       status_reason: null,
       status_changed_at: null,
@@ -72,6 +74,7 @@ it.each(['moderator', 'superadmin'] as const)(
       last_login_at: null,
     });
     vi.mocked(getAccountCounts).mockResolvedValue({ followers: 2, posts: 3 });
+    vi.mocked(listAccountPosts).mockResolvedValue({ items: [], nextCursor: null });
     const router = createRouter({
       routeTree,
       history: createMemoryHistory({ initialEntries: ['/audit'] }),

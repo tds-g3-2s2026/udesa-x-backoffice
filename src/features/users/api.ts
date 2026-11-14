@@ -75,6 +75,8 @@ export interface UserAccount {
   email: string;
   handle: string;
   display_name: string | null;
+  /** What the account wrote about itself, `null` if it never wrote anything (E5-H10). */
+  bio: string | null;
   status: AccountStatus;
   /** Why and when `status` last changed. Only an administrator's block leaves a reason. */
   status_reason: string | null;
@@ -143,4 +145,44 @@ export async function getAccountCounts(id: string): Promise<AccountCounts> {
  */
 export async function blockAccount(id: string, reason: string): Promise<void> {
   await apiClient.post(`/admin/users/${id}/block`, { reason });
+}
+
+/** The text users-api and posts-api write over cleaned content (E5-H10). */
+export const REMOVED_BY_MODERATION = '[Contenido eliminado por moderación]';
+
+/**
+ * Replaces the biography with `REMOVED_BY_MODERATION` (E5-H10). The name and
+ * the sessions of the account stay; asking again changes nothing.
+ */
+export async function cleanAccountContent(id: string): Promise<void> {
+  await apiClient.post(`/admin/users/${id}/clean-content`);
+}
+
+/** A post of the account, with the few fields its list shows. */
+export interface AccountPost {
+  id: string;
+  content: string;
+  createdAt: string;
+  /** The post this one answers, `null` if it answers nothing. */
+  parentId: string | null;
+  images: { id: string }[];
+}
+
+export interface AccountPostPage {
+  items: AccountPost[];
+  nextCursor: string | null;
+}
+
+/**
+ * What the account wrote, replies included, newest first and twenty per page
+ * (E5-H10). posts-api does not apply the visibility of the account here.
+ */
+export async function listAccountPosts(
+  id: string,
+  cursor: string | null = null
+): Promise<AccountPostPage> {
+  const { data } = await apiClient.get<AccountPostPage>(`/admin/posts/accounts/${id}/posts`, {
+    params: cursor ? { cursor } : {},
+  });
+  return data;
 }

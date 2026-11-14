@@ -13,9 +13,18 @@ vi.mock('@tanstack/react-router', () => ({
     children,
   }: {
     to: string;
-    params?: { userId: string };
+    params?: Record<string, string>;
     children: ReactNode;
-  }) => <a href={params ? to.replace('$userId', params.userId) : to}>{children}</a>,
+  }) => (
+    <a
+      href={Object.entries(params ?? {}).reduce(
+        (path, [name, value]) => path.replace(`$${name}`, value),
+        to
+      )}
+    >
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock('../../../../src/features/audit/api', () => ({ listAuditEntries: vi.fn() }));
@@ -112,4 +121,32 @@ it('shows an error and allows retrying', async () => {
   expect(await screen.findByRole('alert')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
   await waitFor(() => expect(screen.getByText(entry.actor_email)).toBeInTheDocument());
+});
+
+it('E5-H10 - names both cleanings and opens a cleaned post from the history', async () => {
+  list.mockResolvedValue({
+    items: [
+      { ...entry, id: 'audit-2', action: 'user.content_cleaned', details: { fields: ['bio'] } },
+      {
+        ...entry,
+        id: 'audit-3',
+        action: 'post.content_cleaned',
+        target_type: 'post',
+        target_id: 'post-1',
+        target_handle: null,
+        details: { author_id: 'account-1' },
+      },
+    ],
+    total: 2,
+  });
+
+  renderWithProviders(<AuditPage />);
+
+  expect(await screen.findByText('Limpió una biografía')).toBeInTheDocument();
+  expect(screen.getByText('Limpió una publicación')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '@mariag' })).toHaveAttribute('href', '/users/account-1');
+  expect(screen.getByRole('link', { name: 'Ver publicación' })).toHaveAttribute(
+    'href',
+    '/posts/post-1'
+  );
 });
