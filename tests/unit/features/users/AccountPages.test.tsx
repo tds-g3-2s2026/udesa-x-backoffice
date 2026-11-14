@@ -1,13 +1,16 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios';
 import { AccountDetailPage } from '../../../../src/features/users/pages/AccountDetailPage';
 import { AccountSearchPage } from '../../../../src/features/users/pages/AccountSearchPage';
-import type {
-  AccountCounts,
-  UserAccount,
-  UserAccountPage,
+import {
+  REMOVED_BY_MODERATION,
+  type AccountCounts,
+  type AccountPost,
+  type AccountPostPage,
+  type UserAccount,
+  type UserAccountPage,
 } from '../../../../src/features/users/api';
 import { apiClient } from '../../../../src/services/apiClient';
 import { renderWithProviders } from '../../helpers/render';
@@ -22,9 +25,18 @@ vi.mock('@tanstack/react-router', () => ({
     children,
   }: {
     to: string;
-    params?: { userId: string };
+    params?: Record<string, string>;
     children: React.ReactNode;
-  }) => <a href={params ? to.replace('$userId', params.userId) : to}>{children}</a>,
+  }) => (
+    <a
+      href={Object.entries(params ?? {}).reduce(
+        (path, [name, value]) => path.replace(`$${name}`, value),
+        to
+      )}
+    >
+      {children}
+    </a>
+  ),
 }));
 
 const config = { headers: new AxiosHeaders() } as InternalAxiosRequestConfig;
@@ -39,6 +51,7 @@ const account = (overrides: Partial<UserAccount> = {}): UserAccount => ({
   email: 'maria.gomez@udesa.edu.ar',
   handle: '@mariag',
   display_name: 'María Gómez',
+  bio: null,
   status: 'active',
   status_reason: null,
   status_changed_at: null,
@@ -257,10 +270,29 @@ describe('AccountSearchPage', () => {
 });
 
 describe('AccountDetailPage', () => {
-  /** Answers each of the two requests the screen makes, by path. */
-  const answer = (detail: () => Promise<unknown>, counts: () => Promise<unknown>) =>
-    get.mockImplementation(((url: string) =>
-      url.startsWith('/admin/posts/') ? counts() : detail()) as never);
+  /** Answers each of the three requests the screen makes, by path. */
+  const answer = (
+    detail: () => Promise<unknown>,
+    counts: () => Promise<unknown>,
+    posts: () => Promise<unknown> = async () => ok<AccountPostPage>({ items: [], nextCursor: null })
+  ) =>
+    get.mockImplementation(((url: string) => {
+      if (url.endsWith('/posts')) {
+        return posts();
+      }
+      return url.startsWith('/admin/posts/') ? counts() : detail();
+    }) as never);
+
+  const accountPost = (overrides: Partial<AccountPost> = {}): AccountPost => ({
+    id: 'post-1',
+    content: 'Compren seguidores en mi perfil',
+    createdAt: '2026-11-10T15:00:00Z',
+    parentId: null,
+    images: [],
+    ...overrides,
+  });
+
+  const noCounts = async () => ok<AccountCounts>({ followers: 0, posts: 0 });
 
   it('E5-H4.CA1 - shows status, registration date, followers and posts', async () => {
     answer(
@@ -427,5 +459,93 @@ describe('AccountDetailPage', () => {
     expect(
       screen.queryByText('Las cuentas de administradores no se bloquean')
     ).not.toBeInTheDocument();
+  });
+
+  it('E5-H10.CA1 - offers Limpiar Contenido on the account detail', async () => {
+    answer(async () => ok(account({ bio: 'Vendo seguidores, escribime' })), noCounts);
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('Vendo seguidores, escribime')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Limpiar Contenido' })).toBeInTheDocument();
+  });
+
+  it('E5-H10.CA2 - clears the biography after confirming and shows the placeholder', async () => {
+    let bio: string | null = 'Vendo seguidores, escribime';
+    answer(async () => ok(account({ bio })), noCounts);
+    post.mockImplementation(async () => {
+      bio = REMOVED_BY_MODERATION;
+      return ok(undefined);
+    });
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Limpiar Contenido' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Limpiar biografía' }));
+
+    expect(await screen.findByText(REMOVED_BY_MODERATION)).toBeInTheDocument();
+    expect(post).toHaveBeenCalledWith('/admin/users/acc-1/clean-content');
+    // Already cleared: nothing left to clear, and blocking stays available.
+    expect(screen.queryByRole('button', { name: 'Limpiar Contenido' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bloquear' })).toBeInTheDocument();
+  });
+
+  it('does not offer to clear an account without a biography', async () => {
+    answer(async () => ok(account({ bio: null })), noCounts);
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('Sin biografía')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Limpiar Contenido' })).not.toBeInTheDocument();
+  });
+
+  it('E5-H10 - lists the posts of the account, each with a link to its detail', async () => {
+    answer(
+      async () => ok(account()),
+      noCounts,
+      async () =>
+        ok<AccountPostPage>({
+          items: [
+            accountPost(),
+            accountPost({ id: 'post-2', content: 'Una respuesta', parentId: 'post-0' }),
+          ],
+          nextCursor: null,
+        })
+    );
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('Compren seguidores en mi perfil')).toBeInTheDocument();
+    expect(screen.getByText('Respuesta')).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('link', { name: 'Ver publicación' }).map((a) => a.getAttribute('href'))
+    ).toEqual(['/posts/post-1', '/posts/post-2']);
+    expect(get).toHaveBeenCalledWith('/admin/posts/accounts/acc-1/posts', { params: {} });
+  });
+
+  it('pages the posts with the cursor posts-api hands out', async () => {
+    answer(
+      async () => ok(account()),
+      noCounts,
+      async () => ok<AccountPostPage>({ items: [accountPost()], nextCursor: 'next-page' })
+    );
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Siguiente' }));
+
+    await waitFor(() =>
+      expect(get).toHaveBeenCalledWith('/admin/posts/accounts/acc-1/posts', {
+        params: { cursor: 'next-page' },
+      })
+    );
+    expect(await screen.findByRole('button', { name: 'Anterior' })).toBeEnabled();
+  });
+
+  it('says when the account has no posts', async () => {
+    answer(async () => ok(account()), noCounts);
+
+    renderWithProviders(<AccountDetailPage userId="acc-1" />);
+
+    expect(await screen.findByText('Esta cuenta no tiene publicaciones.')).toBeInTheDocument();
   });
 });

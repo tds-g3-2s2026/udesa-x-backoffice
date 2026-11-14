@@ -14,16 +14,19 @@ import {
 } from '@mantine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { IconArrowLeft, IconBan } from '@tabler/icons-react';
-import { ProblemAlert, ReasonModal } from '../../../components';
+import { IconArrowLeft, IconBan, IconEraser } from '@tabler/icons-react';
+import { ConfirmModal, ProblemAlert, ReasonModal } from '../../../components';
 import { toApiError } from '../../../services/apiClient';
 import {
   ACCOUNT_STATUS,
   blockAccount,
+  cleanAccountContent,
   formatLastLogin,
   getAccount,
   getAccountCounts,
+  REMOVED_BY_MODERATION,
 } from '../api';
+import { AccountPosts } from '../components/AccountPosts';
 
 /** Same limit users-api applies to the reason of a block. */
 const BLOCK_REASON_MAX_LENGTH = 500;
@@ -59,11 +62,13 @@ export interface AccountDetailPageProps {
  * The detail of an app account (E5-H4): its state and registration date from
  * users-api, its followers and posts from posts-api. Two requests that do not
  * wait for each other: if the counters fail, the account is still shown.
- * From here an administrator blocks the account (E5-H5).
+ * From here an administrator blocks the account (E5-H5), clears its biography
+ * and opens each of its posts to clear them too (E5-H10).
  */
 export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) => {
   const queryClient = useQueryClient();
   const [blocking, setBlocking] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const account = useQuery({
     queryKey: ['account', userId],
     queryFn: () => getAccount(userId),
@@ -84,10 +89,23 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
     },
   });
 
+  const clean = useMutation({
+    mutationFn: () => cleanAccountContent(userId),
+    onSuccess: () => {
+      clean.reset();
+      setCleaning(false);
+      void queryClient.invalidateQueries({ queryKey: ['account', userId] });
+    },
+  });
+
   // The last error belongs to the attempt that is closing.
   const closeBlocking = () => {
     block.reset();
     setBlocking(false);
+  };
+  const closeCleaning = () => {
+    clean.reset();
+    setCleaning(false);
   };
 
   if (account.isPending) {
@@ -112,6 +130,8 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
   const displayName = data.display_name?.trim() || data.handle;
   const status = ACCOUNT_STATUS[data.status];
   const blocked = data.status === 'suspended';
+  // Nothing to clear on an empty biography or on one already cleared.
+  const cleanable = Boolean(data.bio) && data.bio !== REMOVED_BY_MODERATION;
   const counter = (value: number | undefined) =>
     counts.isPending ? <Loader size="xs" /> : (value ?? '—');
 
@@ -147,6 +167,21 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
             <Text size="sm">Última conexión: {formatLastLogin(data.last_login_at)}</Text>
           </div>
 
+          <div>
+            <Text size="xs" c="dimmed">
+              Biografía
+            </Text>
+            {data.bio ? (
+              <Text size="sm" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                {data.bio}
+              </Text>
+            ) : (
+              <Text size="sm" c="dimmed">
+                Sin biografía
+              </Text>
+            )}
+          </div>
+
           {/* An account blocked before reasons were stored has none to show. */}
           {blocked && data.status_reason ? (
             <Alert
@@ -169,20 +204,34 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
 
           <ProblemAlert error={counts.isError ? toApiError(counts.error) : null} />
 
-          {blocked ? null : (
+          {cleanable || !blocked ? (
             <Group justify="flex-end">
-              <Button
-                color="red"
-                variant="light"
-                leftSection={<IconBan size={16} />}
-                onClick={() => setBlocking(true)}
-              >
-                Bloquear
-              </Button>
+              {cleanable ? (
+                <Button
+                  color="red"
+                  variant="light"
+                  leftSection={<IconEraser size={16} />}
+                  onClick={() => setCleaning(true)}
+                >
+                  Limpiar Contenido
+                </Button>
+              ) : null}
+              {blocked ? null : (
+                <Button
+                  color="red"
+                  variant="light"
+                  leftSection={<IconBan size={16} />}
+                  onClick={() => setBlocking(true)}
+                >
+                  Bloquear
+                </Button>
+              )}
             </Group>
-          )}
+          ) : null}
         </Stack>
       </Card>
+
+      <AccountPosts userId={userId} />
 
       <ReasonModal
         opened={blocking}
@@ -194,6 +243,17 @@ export const AccountDetailPage: React.FC<AccountDetailPageProps> = ({ userId }) 
         error={block.isError ? toApiError(block.error) : null}
         onConfirm={(reason) => block.mutate(reason)}
         onClose={closeBlocking}
+      />
+
+      <ConfirmModal
+        opened={cleaning}
+        title={`Limpiar la biografía de ${data.handle}`}
+        description={`La biografía pasa a "${REMOVED_BY_MODERATION}". El nombre y las sesiones de la cuenta no cambian. No se puede deshacer.`}
+        confirmLabel="Limpiar biografía"
+        loading={clean.isPending}
+        error={clean.isError ? toApiError(clean.error) : null}
+        onConfirm={() => clean.mutate()}
+        onClose={closeCleaning}
       />
     </Stack>
   );

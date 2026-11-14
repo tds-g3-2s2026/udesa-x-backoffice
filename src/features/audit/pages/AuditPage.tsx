@@ -14,10 +14,22 @@ const ACTION_LABELS: Record<string, string> = {
   'user.blocked': 'Bloqueó una cuenta',
   'report.dismissed': 'Descartó denuncias',
   'report.resolved': 'Resolvió denuncias',
+  'user.content_cleaned': 'Limpió una biografía',
+  'post.content_cleaned': 'Limpió una publicación',
 };
 
 function AuditTarget({ entry }: { entry: AuditEntry }) {
   const role = useAuthStore((state) => state.user?.role);
+  // A cleaned post keeps its detail, now with the placeholder (E5-H10).
+  if (entry.target_type === 'post') {
+    return (
+      <Link to="/posts/$postId" params={{ postId: entry.target_id }}>
+        <Text component="span" size="sm" c="blue">
+          Ver publicación
+        </Text>
+      </Link>
+    );
+  }
   if (entry.target_type !== 'user') {
     return <Text size="sm">{entry.target_type}</Text>;
   }
