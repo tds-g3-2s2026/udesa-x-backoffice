@@ -8,6 +8,7 @@ import { router } from './router';
 import { apiClient } from './services/apiClient';
 import { attachSessionGuard } from './features/auth/sessionGuard';
 import '@mantine/core/styles.css';
+import '@mantine/charts/styles.css';
 
 attachSessionGuard(apiClient);
 
