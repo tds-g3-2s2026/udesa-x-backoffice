@@ -54,6 +54,16 @@ describe('Backoffice App Shell', () => {
     ).toBeInTheDocument();
   });
 
+  it('T-48 - the color scheme button is named after what it switches to', async () => {
+    signInAs('moderator');
+    renderAt('/');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Modo oscuro' }));
+
+    expect(await screen.findByRole('button', { name: 'Modo claro' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Modo oscuro' })).not.toBeInTheDocument();
+  });
+
   it('renders the health route inside the shell', async () => {
     signInAs('moderator');
     renderAt('/health');
