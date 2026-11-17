@@ -64,6 +64,8 @@ export const AppLayout: React.FC = () => {
   };
 
   const canManageUsers = user.role === 'superadmin';
+  // A tooltip is not an accessible name: each icon-only button repeats it as its label.
+  const schemeLabel = colorScheme === 'dark' ? 'Modo claro' : 'Modo oscuro';
 
   return (
     <AppShell
@@ -79,7 +81,13 @@ export const AppLayout: React.FC = () => {
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           {/* Left: Branding and Mobile Burger */}
           <Group gap="sm" wrap="nowrap">
-            <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
+            <Burger
+              opened={opened}
+              onClick={toggle}
+              hiddenFrom="sm"
+              size="sm"
+              aria-label="Navegación"
+            />
             <Group gap="xs" wrap="nowrap">
               <Title order={3} style={{ whiteSpace: 'nowrap' }}>
                 UdeSA-X Backoffice
@@ -97,8 +105,9 @@ export const AppLayout: React.FC = () => {
           {/* Right: Notifications, Theme Switcher & User Profile Menu */}
           <Group gap="sm" wrap="nowrap">
             {/* Quick search button for mobile viewports */}
-            <Tooltip label="Search" hiddenFrom="sm">
+            <Tooltip label="Búsqueda rápida" hiddenFrom="sm">
               <ActionIcon
+                aria-label="Búsqueda rápida"
                 variant="subtle"
                 color="gray"
                 size="lg"
@@ -111,8 +120,9 @@ export const AppLayout: React.FC = () => {
             </Tooltip>
 
             {/* Notifications */}
-            <Tooltip label="Notifications (3 unread)">
+            <Tooltip label="Denuncias">
               <ActionIcon
+                aria-label="Denuncias"
                 variant="subtle"
                 color="gray"
                 size="lg"
@@ -124,8 +134,9 @@ export const AppLayout: React.FC = () => {
             </Tooltip>
 
             {/* Color Scheme Toggle */}
-            <Tooltip label={colorScheme === 'dark' ? 'Light mode' : 'Dark mode'}>
+            <Tooltip label={schemeLabel}>
               <ActionIcon
+                aria-label={schemeLabel}
                 variant="subtle"
                 color="gray"
                 size="lg"

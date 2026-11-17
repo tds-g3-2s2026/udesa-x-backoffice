@@ -40,6 +40,20 @@ describe('Backoffice App Shell', () => {
     expect(screen.getByText('moderator')).toBeInTheDocument();
   });
 
+  it('T-48 - names every icon-only button in the header for a screen reader', async () => {
+    signInAs('moderator');
+    renderAt('/');
+
+    await screen.findByText('Platform Overview');
+    for (const name of ['Navegación', 'Búsqueda rápida', 'Denuncias', 'Modo oscuro']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
+    // The search trigger is read out with the text it shows, not a label of its own.
+    expect(
+      screen.getByRole('button', { name: /Search pages, users, actions/ })
+    ).toBeInTheDocument();
+  });
+
   it('renders the health route inside the shell', async () => {
     signInAs('moderator');
     renderAt('/health');
