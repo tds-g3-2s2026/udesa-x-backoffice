@@ -157,7 +157,6 @@ export const GlobalSearchBar: React.FC = () => {
       {/* Modern Search Trigger Button */}
       <UnstyledButton
         onClick={open}
-        aria-label="Quick search"
         style={(theme) => ({
           display: 'flex',
           alignItems: 'center',
