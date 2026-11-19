@@ -10,6 +10,7 @@ import {
   ThemeIcon,
   Title,
 } from '@mantine/core';
+import { BarChart } from '@mantine/charts';
 import { useQueries, useQuery } from '@tanstack/react-query';
 import {
   IconAlertTriangle,
@@ -19,7 +20,7 @@ import {
   IconUsers,
 } from '@tabler/icons-react';
 import { HEALTH_REFRESH_INTERVAL_MS, SERVICES, fetchHealth } from '../../health/api';
-import { fetchAccountMetrics, fetchPostsToday } from '../api';
+import { fetchAccountMetrics, fetchPostsToday, fetchRegistrations } from '../api';
 
 const REFRESH_INTERVAL_MS = 30_000;
 
@@ -56,6 +57,12 @@ const StatCard: React.FC<StatCardProps> = ({ label, color, icon, pending, value 
 
 const formatCount = (count: number | undefined) => count?.toLocaleString('es-AR');
 
+/** `2026-11-09` as `09/11`. Not through `Date`: a bare date would be read as UTC and shift a day. */
+const formatDay = (date: string) => {
+  const [, month, day] = date.split('-');
+  return `${day}/${month}`;
+};
+
 export const DashboardPage: React.FC = () => {
   const accounts = useQuery({
     queryKey: ['dashboard', 'accounts'],
@@ -65,6 +72,11 @@ export const DashboardPage: React.FC = () => {
   const postsToday = useQuery({
     queryKey: ['dashboard', 'posts-today'],
     queryFn: fetchPostsToday,
+    refetchInterval: REFRESH_INTERVAL_MS,
+  });
+  const registrations = useQuery({
+    queryKey: ['dashboard', 'registrations'],
+    queryFn: fetchRegistrations,
     refetchInterval: REFRESH_INTERVAL_MS,
   });
   // Same keys and options as the health screen, so both share one cache entry per service.
@@ -82,6 +94,7 @@ export const DashboardPage: React.FC = () => {
   const refreshAll = () => {
     void accounts.refetch();
     void postsToday.refetch();
+    void registrations.refetch();
     checks.forEach((check) => void check.refetch());
   };
 
@@ -129,6 +142,31 @@ export const DashboardPage: React.FC = () => {
           value={formatCount(accounts.data?.accounts_under_review)}
         />
       </SimpleGrid>
+
+      <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+          Registros de los últimos 7 días
+        </Text>
+        <Text size="xs" c="dimmed" mb="md">
+          Cuenta toda cuenta creada, la haya verificado o no.
+        </Text>
+        {registrations.isPending ? (
+          <Loader size="sm" aria-label="Cargando registros" />
+        ) : registrations.isError ? (
+          <Text c="dimmed">No se pudieron leer los registros.</Text>
+        ) : (
+          <BarChart
+            h={240}
+            data={registrations.data.map((day) => ({
+              day: formatDay(day.date),
+              Registros: day.registrations,
+            }))}
+            dataKey="day"
+            series={[{ name: 'Registros', color: 'blue.6' }]}
+            yAxisProps={{ allowDecimals: false }}
+          />
+        )}
+      </Card>
     </Stack>
   );
 };

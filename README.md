@@ -2,7 +2,7 @@
 
 Aplicación web destinada exclusivamente a administradores para monitorear el funcionamiento de la aplicación principal, detectar fallas y auditar la plataforma.
 
-**Stack:** React 19 con React Compiler activado, Vite 8, TypeScript en modo estricto, Mantine 9 para la interfaz, TanStack Router v1 para el ruteo tipado, Zustand para el estado de sesión, TanStack Query para el acceso a datos y Axios como cliente HTTP. Runtime y gestor de paquetes estándar con Bun (`bun.lock`), tests con Vitest y React Testing Library, linting con ESLint y formato con Prettier.
+**Stack:** React 19 con React Compiler activado, Vite 8, TypeScript en modo estricto, Mantine 9 para la interfaz (con `@mantine/charts`, sobre Recharts, para los gráficos), TanStack Router v1 para el ruteo tipado, Zustand para el estado de sesión, TanStack Query para el acceso a datos y Axios como cliente HTTP. Runtime y gestor de paquetes estándar con Bun (`bun.lock`), tests con Vitest y React Testing Library, linting con ESLint y formato con Prettier.
 
 ## Entorno de ejecución y gestor de paquetes (Bun)
 
@@ -214,7 +214,7 @@ src/
 │   └── data/            # DataTable con estados cargando, vacío y error
 ├── features/            # un módulo por área del backoffice
 │   ├── auth/            # login, sesión y guardia de 401 (E5-H2)
-│   ├── dashboard/       # métricas globales de la plataforma
+│   ├── dashboard/       # métricas globales de la plataforma, con el gráfico de registros de la semana
 │   ├── feedback/        # comentarios y reportes de error enviados desde la app (E5-H12)
 │   ├── health/          # estado de los microservicios (E5-H11)
 │   ├── moderation/      # cola de denuncias (E5-H7)
