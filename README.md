@@ -1,5 +1,7 @@
 # UdeSA-X Backoffice
 
+[![Cobertura](https://codecov.io/gh/tds-g3-2s2026/udesa-x-backoffice/branch/main/graph/badge.svg)](https://codecov.io/gh/tds-g3-2s2026/udesa-x-backoffice)
+
 Aplicación web destinada exclusivamente a administradores para monitorear el funcionamiento de la aplicación principal, detectar fallas y auditar la plataforma.
 
 **Stack:** React 19 con React Compiler activado, Vite 8, TypeScript en modo estricto, Mantine 9 para la interfaz (con `@mantine/charts`, sobre Recharts, para los gráficos), TanStack Router v1 para el ruteo tipado, Zustand para el estado de sesión, TanStack Query para el acceso a datos y Axios como cliente HTTP. Runtime y gestor de paquetes estándar con Bun (`bun.lock`), tests con Vitest y React Testing Library, linting con ESLint y formato con Prettier.
