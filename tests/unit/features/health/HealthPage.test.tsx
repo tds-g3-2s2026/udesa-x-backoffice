@@ -24,10 +24,12 @@ describe('HealthPage', () => {
   it('E5-H11.CA1 asks for the health of every deployed service', async () => {
     renderWithProviders(<HealthPage />);
 
-    await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(5));
     expect(mockedFetch.mock.calls.map(([service]) => service)).toEqual([
       'users-api',
       'posts-api',
+      'notifications-api',
+      'assistant-api',
       'api-gateway',
     ]);
   });
@@ -84,10 +86,10 @@ describe('HealthPage', () => {
 
   it('asks every service again on demand', async () => {
     renderWithProviders(<HealthPage />);
-    await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(5));
 
     fireEvent.click(screen.getByRole('button', { name: /Actualizar/ }));
 
-    await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(6));
+    await waitFor(() => expect(mockedFetch).toHaveBeenCalledTimes(10));
   });
 });
