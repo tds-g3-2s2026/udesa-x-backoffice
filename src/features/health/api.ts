@@ -1,7 +1,13 @@
 import { apiClient } from '../../services/apiClient';
 
 /** The services the gateway reports on, in the order the screen lists them. */
-export const SERVICES = ['users-api', 'posts-api', 'api-gateway'] as const;
+export const SERVICES = [
+  'users-api',
+  'posts-api',
+  'notifications-api',
+  'assistant-api',
+  'api-gateway',
+] as const;
 
 export type ServiceName = (typeof SERVICES)[number];
 

@@ -69,7 +69,7 @@ describe('DashboardPage', () => {
   it('shows what the services answer, zeros included', async () => {
     renderWithProviders(<DashboardPage />);
 
-    await waitFor(() => expect(valueOf('Microservices')).toBe('2/3 Online'));
+    await waitFor(() => expect(valueOf('Microservices')).toBe('4/5 Online'));
     expect(valueOf('Active Users')).toBe('1.500');
     expect(valueOf('Posts Today')).toBe('0');
     expect(valueOf('Accounts Under Review')).toBe('0');
